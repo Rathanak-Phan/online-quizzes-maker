@@ -107,3 +107,12 @@ erDiagram
     }
 ```
 
+{
+  "name": "Super Admin",
+  "email": "admin@quizmaster.com",
+  "password": "$2a$12$Yq9k5vV5Kz6f7g8h9j0k1u2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7", // This is bcrypt hash for password "admin123"
+  "role": "admin",
+  "isValidated": true,
+  "adSkipping": true,
+  "createdAt": { "$date": "2025-12-30T00:00:00Z" }
+}

@@ -1,118 +1,104 @@
 "use client";
 
-import { useRef, useState, useEffect, ChangeEvent } from "react";
-import axios, { AxiosError } from "axios";
+import { useState } from "react";
+import { Camera, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 interface ProfileAvatarUploadProps {
-  userId: number;
+  userId: string;
   avatarUrl?: string | null;
-  setUser: React.Dispatch<any>; // parent state updater
+  setUser?: (user: any) => void;
+  size?: "sm" | "md" | "lg";
 }
 
-const ProfileAvatarUpload: React.FC<ProfileAvatarUploadProps> = ({
+export default function ProfileAvatarUpload({
   userId,
   avatarUrl,
   setUser,
-}) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string>(
-    avatarUrl ? `http://localhost:5000${avatarUrl}` : "/avatar-default.png"
-  );
-  const [loading, setLoading] = useState(false);
+  size = "md"
+}: ProfileAvatarUploadProps) {
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Update preview when avatarUrl changes (like on login)
-  useEffect(() => {
-    setPreview(
-      avatarUrl ? `http://localhost:5000${avatarUrl}` : "/avatar-default.png"
-    );
-  }, [avatarUrl]);
-
-  const handleClick = () => {
-    fileInputRef.current?.click();
+  const sizeClasses = {
+    sm: "w-10 h-10",
+    md: "w-12 h-12",
+    lg: "w-16 h-16"
   };
 
-  const handleChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setPreview(URL.createObjectURL(file)); // temporary preview
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
 
-    const formData = new FormData();
-    formData.append("profile", file);
-
+    // Upload to server
+    setUploading(true);
     try {
-      setLoading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("userId", userId);
 
-      const res = await axios.post(
-        `http://localhost:5000/api/users/upload-profile/${userId}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      const response = await fetch("/api/upload/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (setUser) {
+          setUser((prev: any) => ({
+            ...prev,
+            profile_image: data.url
+          }));
         }
-      );
-
-      // Use full URL for preview
-      const imageUrl = `http://localhost:5000${res.data.image}`;
-      setPreview(imageUrl);
-
-      // Update parent user state
-      setUser((prev: any) => ({
-        ...prev,
-        profile_image: res.data.image,
-      }));
-
-      // Update localStorage so it persists across pages
-      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ ...storedUser, profile_image: res.data.image })
-      );
-    } catch (err) {
-      console.error(err);
-      if (err instanceof AxiosError) {
-        alert(err.response?.data?.message || "Upload failed");
-      } else {
-        alert("Upload failed");
       }
+    } catch (error) {
+      console.error("Upload failed:", error);
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  return (
-    <div
-      onClick={handleClick}
-      className="relative w-10 h-10 rounded-full overflow-hidden cursor-pointer group"
-    >
-      <img
-        src={preview}
-        alt="Profile Avatar"
-        className="w-full h-full object-cover"
-      />
+  const imageUrl = previewUrl || avatarUrl || "/default-avatar.png";
 
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/40 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-        Change
+  return (
+    <div className="relative group">
+      <div className={`${sizeClasses[size]} rounded-full overflow-hidden border-2 border-white shadow-lg`}>
+        {uploading ? (
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+          </div>
+        ) : (
+          <Image
+            src={imageUrl}
+            alt="Profile"
+            width={96}
+            height={96}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = "/default-avatar.png";
+            }}
+          />
+        )}
       </div>
 
-      {/* Loading spinner */}
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/70">
-          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={handleChange}
-      />
+      <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full 
+        opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          disabled={uploading}
+        />
+        <Camera className="w-5 h-5 text-white" />
+      </label>
     </div>
   );
-};
-
-export default ProfileAvatarUpload;
+}

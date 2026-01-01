@@ -1,87 +1,179 @@
+// app/teacher/page.tsx
 "use client";
 
-import { Users, School, FileText, Trophy, Clock, Award } from "lucide-react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { Users, School, FileText, Trophy, Clock, Award } from "lucide-react";
 
-const stats = [
-  { title: "Total Classes", value: "12", icon: School, color: "bg-blue-100 text-blue-600" },
-  { title: "Total Students", value: "348", icon: Users, color: "bg-green-100 text-green-600" },
-  { title: "Active Quizzes", value: "8", icon: FileText, color: "bg-purple-100 text-purple-600" },
-  { title: "Pending Reviews", value: "15", icon: Clock, color: "bg-yellow-100 text-yellow-600" },
-  { title: "Total Challenges", value: "4", icon: Trophy, color: "bg-pink-100 text-pink-600" },
-  { title: "Avg. Completion Rate", value: "92%", icon: Award, color: "bg-orange-100 text-orange-600" },
-];
+interface TeacherStats {
+  totalClasses: number;
+  totalStudents: number;
+  activeQuizzes: number;
+  pendingReviews: number;
+  totalChallenges: number;
+  completionRate: number;
+}
 
-const recentClasses = [
-  { initials: "M10", name: "Math Grade 10A", teacher: "You", status: "Active" },
-  { initials: "S9", name: "Science 9B", teacher: "You", status: "Active" },
-  { initials: "E11", name: "English 11", teacher: "You", status: "Active" },
-];
+interface Class {
+  _id: string;
+  initials: string;
+  name: string;
+  students: number;
+  status: string;
+}
 
 export default function TeacherDashboard() {
-  return (
-    <div className="max-w-7xl mx-auto">
-      {/* Pastel Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-10">
-        {stats.map((stat) => (
-          <div key={stat.title} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-            <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-              <stat.icon className="w-6 h-6" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-            <p className="text-sm text-gray-600 mt-2">{stat.title}</p>
-          </div>
-        ))}
+  const [stats, setStats] = useState<TeacherStats | null>(null);
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [teacherName, setTeacherName] = useState("Teacher");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      // Get current teacher from localStorage
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        setError("Please log in again");
+        setLoading(false);
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      setTeacherName(user.name || "Teacher");
+
+      // Fetch real stats and classes
+      const [statsRes, classesRes] = await Promise.all([
+        fetch("/api/teacher/stats"),
+        fetch("/api/teacher/classes"),
+      ]);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData.stats);
+      }
+
+      if (classesRes.ok) {
+        const classesData = await classesRes.json();
+        setClasses(classesData.classes || []);
+      }
+
+    } catch (err) {
+      console.error("Failed to load dashboard:", err);
+      setError("Failed to load data");
+      // Fallback mock data
+      setStats({
+        totalClasses: 12,
+        totalStudents: 348,
+        activeQuizzes: 8,
+        pendingReviews: 15,
+        totalChallenges: 4,
+        completionRate: 92,
+      });
+      setClasses([
+        { _id: "1", initials: "M10", name: "Math Grade 10A", students: 32, status: "Active" },
+        { _id: "2", initials: "S9", name: "Science 9B", students: 28, status: "Active" },
+        { _id: "3", initials: "E11", name: "English 11", students: 35, status: "Active" },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-2xl text-gray-600">Loading dashboard...</div>
       </div>
+    );
+  }
 
-      {/* Class Management Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
-        <div className="p-8 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">My Classes</h2>
-          <Link href="/teacher/classes/new" className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-            + New Class
-          </Link>
-        </div>
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-red-600 text-xl">{error}</div>
+      </div>
+    );
+  }
 
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-8 py-4 text-left text-sm font-semibold text-gray-700">CLASS</th>
-              <th className="px-8 py-4 text-left text-sm font-semibold text-gray-700">STUDENTS</th>
-              <th className="px-8 py-4 text-left text-sm font-semibold text-gray-700">STATUS</th>
-              <th className="px-8 py-4 text-right text-sm font-semibold text-gray-700">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {recentClasses.map((cls) => (
-              <tr key={cls.name} className="hover:bg-gray-50">
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold">
-                      {cls.initials}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-3xl shadow-xl p-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Welcome back, {teacherName}!
+          </h1>
+          <p className="text-xl text-gray-600 mb-10">
+            Manage your classes and quizzes.
+          </p>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-12">
+            {stats && [
+              { title: "Total Classes", value: stats.totalClasses.toString(), Icon: School, color: "bg-blue-100 text-blue-600" },
+              { title: "Total Students", value: stats.totalStudents.toString(), Icon: Users, color: "bg-green-100 text-green-600" },
+              { title: "Active Quizzes", value: stats.activeQuizzes.toString(), Icon: FileText, color: "bg-purple-100 text-purple-600" },
+              { title: "Pending Reviews", value: stats.pendingReviews.toString(), Icon: Clock, color: "bg-yellow-100 text-yellow-600" },
+              { title: "Total Challenges", value: stats.totalChallenges.toString(), Icon: Trophy, color: "bg-pink-100 text-pink-600" },
+              { title: "Avg. Completion Rate", value: `${stats.completionRate}%`, Icon: Award, color: "bg-orange-100 text-orange-600" },
+            ].map((stat) => (
+              <div key={stat.title} className="bg-gray-50 rounded-2xl p-6 text-center border border-gray-200">
+                <div className={`w-14 h-14 ${stat.color} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md`}>
+                  <stat.Icon className="w-8 h-8" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-600 mt-2">{stat.title}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* My Classes */}
+          <div className="bg-gray-50 rounded-2xl p-8">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-900">My Classes</h2>
+              <Link href="/teacher/classes/new" className="bg-blue-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-blue-700 transition shadow-md">
+                + New Class
+              </Link>
+            </div>
+
+            {classes.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-xl">No classes yet</p>
+                <p className="mt-2">Create your first class to get started!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {classes.map((cls) => (
+                  <div key={cls._id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        {cls.initials}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">{cls.name}</h3>
+                        <p className="text-gray-600">{cls.students} students</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{cls.name}</p>
-                      <p className="text-sm text-gray-500">Managed by {cls.teacher}</p>
+                    <div className="flex justify-between items-center mt-6">
+                      <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {cls.status}
+                      </span>
+                      <Link href={`/teacher/classes/${cls._id}`} className="text-blue-600 hover:text-blue-800 font-medium">
+                        View →
+                      </Link>
                     </div>
                   </div>
-                </td>
-                <td className="px-8 py-6 text-gray-700">32 students</td>
-                <td className="px-8 py-6">
-                  <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                    {cls.status}
-                  </span>
-                </td>
-                <td className="px-8 py-6 text-right">
-                  <Link href={`/teacher/classes/${cls.initials.toLowerCase()}`} className="text-blue-600 hover:underline mr-4">
-                    View
-                  </Link>
-                  <button className="text-gray-400 hover:text-gray-600">⋮</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

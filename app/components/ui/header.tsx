@@ -329,7 +329,7 @@ export default function Header() {
                   >
                     <div className="flex items-center gap-4">
                       <svg
-                        className="w-6 h-6 text-gray-600"
+                        className="w-6 h-6 text-red-600"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -341,7 +341,7 @@ export default function Header() {
                           d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                         />
                       </svg>
-                      <span className="text-gray-800 text-base">Log out</span>
+                      <span className="text-red-800 text-base">Log out</span>
                     </div>
                   </button>
 

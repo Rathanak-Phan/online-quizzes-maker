@@ -12,11 +12,9 @@ import {
   Github,
 } from "lucide-react";
 import Link from "next/link";
-import api from "@/lib/axios";
-import { AxiosError } from "axios";
-import { useRouter } from "next/navigation";
-import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import Image from "next/image";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
@@ -25,41 +23,67 @@ export default function Register() {
   const [fullname, setFullname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
-  const [comformpassword, setComformpassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<"user" | "teacher">("user"); // "user" = student
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
-  useAuthRedirect();
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const handleRegister = async () => {
-    // Frontend check: passwords match
-    if (password !== comformpassword) {
+    if (password !== confirmPassword) {
       setMessage("Passwords do not match");
       return;
     }
 
+    if (!fullname || !email || !password) {
+      setMessage("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
     try {
-      const res = await api.post("/api/auth/register", {
-        name: fullname,
-        email,
-        password,
-        role,
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fullname.trim(),
+          email: email.toLowerCase().trim(),
+          password,
+          role, // "user" or "teacher"
+        }),
       });
 
-      setMessage(res.data.message);
+      const data = await res.json();
 
-      setTimeout(() => {
-        router.push("/login");
-      }, 3000);
-    } catch (err) {
-      let errorMessage = "Error";
-      if (err instanceof AxiosError) {
-        errorMessage = err.response?.data?.error || err.message; // backend sends 'error'
+      if (!res.ok) {
+        setMessage(data.error || "Registration failed");
+      } else {
+        setMessage(
+          role === "teacher"
+            ? "Teacher account created! Awaiting admin approval. Redirecting to login..."
+            : "Account created successfully! Redirecting to login..."
+        );
+
+        setTimeout(() => {
+          router.push("/login");
+        }, 3000);
       }
-      setMessage(errorMessage);
+    } catch (err) {
+      setMessage("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSocialLogin = (provider: "google" | "github" | "facebook") => {
+    signIn(provider, {
+      callbackUrl: "/dashboard", // or role-based redirect later
+    });
   };
 
   return (
@@ -90,19 +114,19 @@ export default function Register() {
 
           {/* Tabs */}
           <div className="grid grid-cols-2 mb-6">
-            <a
+            <Link
               href="/login"
               className="py-2 font-semibold bg-gray-200 rounded-l-lg text-gray-700 text-center"
             >
               Sign In
-            </a>
-            <button className="py-2 font-semibold bg-blue-600 text-white rounded-r-lg">
+            </Link>
+            <div className="py-2 font-semibold bg-blue-600 text-white rounded-r-lg text-center">
               Sign Up
-            </button>
+            </div>
           </div>
 
           {/* Form */}
-          <form className="space-y-5">
+          <form onSubmit={handleRegister} className="space-y-5">
             {/* Full Name */}
             <div>
               <label className="text-sm font-semibold text-gray-700">
@@ -115,6 +139,7 @@ export default function Register() {
                   placeholder="John Doe"
                   value={fullname}
                   onChange={(e) => setFullname(e.target.value)}
+                  required
                   className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
               </div>
@@ -132,9 +157,25 @@ export default function Register() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
               </div>
+            </div>
+
+            {/* Role Selection */}
+            <div>
+              <label className="text-sm font-semibold text-gray-700">
+                Account Type
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as "user" | "teacher")}
+                className="w-full mt-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+              >
+                <option value="user">Student / Learner</option>
+                <option value="teacher">Teacher (requires admin approval)</option>
+              </select>
             </div>
 
             {/* Password */}
@@ -149,6 +190,8 @@ export default function Register() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
                   className="w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
                 <button
@@ -175,8 +218,9 @@ export default function Register() {
                 <input
                   type={showPassword2 ? "text" : "password"}
                   placeholder="••••••••"
-                  value={comformpassword}
-                  onChange={(e) => setComformpassword(e.target.value)}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
                   className="w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
                 />
                 <button
@@ -193,21 +237,27 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Button */}
+            {/* Submit Button */}
             <button
-              type="button"
-              onClick={handleRegister}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:scale-[1.02] transition"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:scale-[1.02] transition disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Create Account
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
-            <p
-              className={`mt-2 text-center ${
-                message.includes("success") ? "text-green-600" : "text-red-500"
-              }`}
-            >
-              {message}
-            </p>
+
+            {/* Message */}
+            {message && (
+              <p
+                className={`mt-2 text-center font-medium ${
+                  message.includes("success") || message.includes("Awaiting")
+                    ? "text-green-600"
+                    : "text-red-500"
+                }`}
+              >
+                {message}
+              </p>
+            )}
           </form>
 
           {/* Divider */}
@@ -217,17 +267,29 @@ export default function Register() {
             <div className="h-px flex-1 bg-gray-300"></div>
           </div>
 
-          {/* Social buttons */}
+          {/* Social Buttons */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <button className="flex items-center justify-center gap-2 border py-3 rounded-lg hover:bg-gray-50 transition">
+            <button
+              type="button"
+              onClick={() => handleSocialLogin("google")}
+              className="flex items-center justify-center gap-2 border py-3 rounded-lg hover:bg-gray-50 transition"
+            >
               <Chrome className="w-5 h-5 text-red-500" /> Google
             </button>
 
-            <button className="flex items-center justify-center gap-2 border py-3 rounded-lg hover:bg-gray-50 transition">
+            <button
+              type="button"
+              onClick={() => handleSocialLogin("facebook")}
+              className="flex items-center justify-center gap-2 border py-3 rounded-lg hover:bg-gray-50 transition"
+            >
               <Facebook className="w-5 h-5 text-blue-600" /> Facebook
             </button>
 
-            <button className="flex items-center justify-center gap-2 border py-3 rounded-lg hover:bg-gray-50 transition">
+            <button
+              type="button"
+              onClick={() => handleSocialLogin("github")}
+              className="flex items-center justify-center gap-2 border py-3 rounded-lg hover:bg-gray-50 transition"
+            >
               <Github className="w-5 h-5" /> GitHub
             </button>
           </div>
@@ -235,9 +297,9 @@ export default function Register() {
           {/* Footer */}
           <p className="text-center text-sm text-gray-500 mt-8">
             Already have an account?{" "}
-            <a href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login" className="text-blue-600 hover:underline">
               Sign in
-            </a>
+            </Link>
           </p>
         </div>
       </div>

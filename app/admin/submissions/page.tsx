@@ -1,15 +1,24 @@
-import Table from "../../components/admin/Table";
+import Table from "../components/Table";
+
+const columns = [
+  { key: "student", header: "Student" },
+  { key: "quiz", header: "Quiz" },
+  { key: "score", header: "Score" },
+  { key: "date", header: "Date" },
+];
+
+const submissions = [
+  { student: "John Doe", quiz: "Math Quiz 1", score: "92%", date: "Dec 28, 2025" },
+  // more data...
+];
 
 export default function SubmissionsPage() {
-  const submissions = [
-    { Student: "Mey Mey", Quiz: "Math Quiz", Score: "8/10" },
-    { Student: "Rathanak", Quiz: "IT Basics", Score: "14/15" },
-  ];
-
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Submissions</h2>
-      <Table headers={["Student", "Quiz", "Score"]} rows={submissions} />
+    <div className="space-y-8">
+      <h1 className="text-4xl font-bold">Submissions</h1>
+      <div className="bg-white rounded-xl shadow-lg p-8">
+        <Table columns={columns} data={submissions} />
+      </div>
     </div>
   );
 }
