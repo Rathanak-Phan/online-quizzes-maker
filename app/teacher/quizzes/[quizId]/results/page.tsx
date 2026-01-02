@@ -1,246 +1,379 @@
-// app/teacher/quizzes/[quizId]/results/page.tsx
+// app/teacher/quizzes/[quizId]/results/page.tsx - WITHOUT useSession
 "use client";
 
-import { useState, useEffect } from "react";
-import { Award, Users, Clock, TrendingUp } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Download,
+  Users,
+  Trophy,
+  BarChart3,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 
-interface StudentResult {
+interface QuizResult {
   _id: string;
-  name: string;
-  score: number; // 0-100
-}
-
-interface QuizResults {
-  classAverage: number;
-  completed: number;
-  totalStudents: number;
-  avgTime: number; // minutes
-  topPerformers: StudentResult[];
-  allStudents: StudentResult[];
+  studentName: string;
+  percentage: number;
+  score: number;
+  totalQuestions: number;
+  timeSpent: number;
+  submittedAt: string;
+  answers: {
+    questionId: string;
+    isCorrect: boolean;
+    timeSpent: number;
+  }[];
 }
 
 export default function QuizResultsPage() {
-  const { quizId } = useParams();
-  const [results, setResults] = useState<QuizResults | null>(null);
+  const params = useParams();
+  const router = useRouter();
+  const quizId = params.quizId as string;
+
+  const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
+  const [quizTitle, setQuizTitle] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const scores = quizResults.map(r => r.percentage).filter(Boolean) as number[];
+    const total = scores.length;
+    
+    if (total === 0) {
+      return {
+        average: 0,
+        standardDeviation: 0,
+        highest: 0,
+        lowest: 0,
+        passRate: 0,
+      };
+    }
+
+    const average = scores.reduce((a, b) => a + b, 0) / total;
+    const squareDiffs = scores.map(score => Math.pow(score - average, 2));
+    const variance = squareDiffs.reduce((a, b) => a + b, 0) / total;
+    const standardDeviation = Math.sqrt(variance);
+    const highest = Math.max(...scores);
+    const lowest = Math.min(...scores);
+    const passRate = (scores.filter(s => s >= 70).length / total) * 100;
+
+    return {
+      average,
+      standardDeviation,
+      highest,
+      lowest,
+      passRate,
+    };
+  }, [quizResults]);
 
   useEffect(() => {
-    if (!quizId || typeof quizId !== "string") return;
     fetchResults();
   }, [quizId]);
 
   const fetchResults = async () => {
     try {
       setLoading(true);
-      setError("");
-
-      const res = await fetch(`/api/teacher/quizzes/${quizId}/results`);
-
-      // Handle empty results gracefully
-      if (res.status === 404 || res.status === 204) {
-        setError("No students have completed this quiz yet");
-        setResults(null);
-        return;
-      }
-
-      if (!res.ok) {
-        throw new Error("Failed to load quiz results");
-      }
-
-      const data = await res.json();
-      setResults(data);
-
-    } catch (err: any) {
-      console.error("Quiz results error:", err);
-      setError(err.message || "Something went wrong");
+      setError(null);
       
-      // Beautiful fallback mock data
-      setResults({
-        classAverage: 87,
-        completed: 34,
-        totalStudents: 38,
-        avgTime: 18,
-        topPerformers: [
-          { _id: "1", name: "Sok Piseth", score: 98 },
-          { _id: "2", name: "Ly Sopheak", score: 95 },
-          { _id: "3", name: "Chan Dara", score: 93 },
-          { _id: "4", name: "Vibol", score: 90 },
-          { _id: "5", name: "Rathana", score: 88 },
-        ],
-        allStudents: [
-          { _id: "1", name: "Sok Piseth", score: 98 },
-          { _id: "2", name: "Ly Sopheak", score: 95 },
-          { _id: "3", name: "Chan Dara", score: 93 },
-          { _id: "4", name: "Vibol", score: 90 },
-          { _id: "5", name: "Rathana", score: 88 },
-          { _id: "6", name: "Sreypov", score: 85 },
-          { _id: "7", name: "Chanthou", score: 82 },
-          { _id: "8", name: "Sovann", score: 80 },
-        ],
-      });
+      console.log("Fetching results for quiz:", quizId);
+      
+      const response = await fetch(`/api/teacher/quizzes/${quizId}/results`);
+      
+      console.log("Response status:", response.status);
+      
+      if (!response.ok) {
+        // Try to get error message
+        let errorText = "";
+        try {
+          errorText = await response.text();
+        } catch (e) {
+          console.log("Could not read error response");
+        }
+        
+        // If API endpoint doesn't exist (404), use mock data
+        if (response.status === 404) {
+          console.log("API endpoint not found, using mock data");
+          setQuizResults(getMockResults());
+          setQuizTitle(`Quiz ${quizId} - Results (Mock Data)`);
+          return;
+        }
+        
+        throw new Error(`Failed to fetch results (${response.status}): ${errorText || response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Results data received:", data);
+      
+      setQuizResults(data.results || []);
+      setQuizTitle(data.quizTitle || `Quiz Results - ${quizId.substring(0, 8)}...`);
+    } catch (err: any) {
+      console.error("Error fetching results:", err);
+      setError(err.message || "Failed to load results");
+      
+      // Fallback to mock data
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Using mock data for development");
+        setQuizResults(getMockResults());
+        setQuizTitle(`Quiz ${quizId} - Results (Mock Data)`);
+        setError(null); // Clear error since we have mock data
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Mock data function
+  function getMockResults(): QuizResult[] {
+    return [
+      {
+        _id: "1",
+        studentName: "John Doe",
+        percentage: 85.5,
+        score: 17,
+        totalQuestions: 20,
+        timeSpent: 1250,
+        submittedAt: new Date().toISOString(),
+        answers: [],
+      },
+      {
+        _id: "2",
+        studentName: "Jane Smith",
+        percentage: 92.0,
+        score: 18,
+        totalQuestions: 20,
+        timeSpent: 1100,
+        submittedAt: new Date(Date.now() - 86400000).toISOString(),
+        answers: [],
+      },
+      {
+        _id: "3",
+        studentName: "Bob Johnson",
+        percentage: 75.0,
+        score: 15,
+        totalQuestions: 20,
+        timeSpent: 980,
+        submittedAt: new Date(Date.now() - 172800000).toISOString(),
+        answers: [],
+      },
+      {
+        _id: "4",
+        studentName: "Alice Williams",
+        percentage: 65.0,
+        score: 13,
+        totalQuestions: 20,
+        timeSpent: 1150,
+        submittedAt: new Date(Date.now() - 259200000).toISOString(),
+        answers: [],
+      },
+      {
+        _id: "5",
+        studentName: "Charlie Brown",
+        percentage: 95.0,
+        score: 19,
+        totalQuestions: 20,
+        timeSpent: 1050,
+        submittedAt: new Date(Date.now() - 345600000).toISOString(),
+        answers: [],
+      },
+    ];
+  }
+
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 lg:px-0 py-20 text-center">
-        <div className="text-2xl text-gray-600 font-medium">Loading quiz results...</div>
-        <div className="mt-4 text-gray-500">Fetching student submissions</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
-  const completedText = results ? `${results.completed}/${results.totalStudents}` : "0/0";
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Results</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchResults}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 lg:px-0 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">
-        Quiz Results & Analytics
-      </h1>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <StatCard
-          icon={Award}
-          value={results ? `${results.classAverage}%` : "--"}
-          label="Class Average"
-          color="blue"
-        />
-        <StatCard
-          icon={Users}
-          value={completedText}
-          label="Completed"
-          color="green"
-        />
-        <StatCard
-          icon={Clock}
-          value={results ? `${results.avgTime} min` : "--"}
-          label="Avg Time"
-          color="purple"
-        />
-      </div>
-
-      {/* Empty State */}
-      {error && (
-        <div className="text-center py-20">
-          <div className="w-32 h-32 mx-auto mb-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <Clock className="w-16 h-16 text-gray-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Waiting for submissions...
-          </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            {error}
-          </p>
-          <p className="text-gray-500 mb-8">
-            Share the quiz with your students and results will appear here automatically.
-          </p>
-        </div>
-      )}
-
-      {/* Results Content */}
-      {results && (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-          <h2 className="text-2xl font-bold mb-6">Top Performers</h2>
-
-          <div className="space-y-4 mb-12">
-            {results.topPerformers.map((student, i) => (
-              <div
-                key={student._id}
-                className="flex items-center justify-between p-5 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-all duration-200"
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/teacher/quizzes"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
               >
-                <div className="flex items-center gap-5">
-                  <div
-                    className={`w-14 h-14 flex items-center justify-center rounded-2xl font-bold text-white text-xl shadow-lg ${
-                      i === 0
-                        ? "bg-yellow-400"
-                        : i === 1
-                        ? "bg-gray-400"
-                        : i === 2
-                        ? "bg-orange-500"
-                        : "bg-blue-500"
-                    }`}
-                  >
-                    {i + 1}
-                  </div>
-                  <p className="font-semibold text-xl text-gray-900">{student.name}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <TrendingUp className="w-7 h-7 text-green-600" />
-                  <span className="font-bold text-2xl text-gray-900">{student.score}%</span>
-                </div>
+                <ArrowLeft className="w-4 h-4" />
+                Back to Quizzes
+              </Link>
+              <h1 className="text-3xl font-bold text-gray-900">{quizTitle}</h1>
+            </div>
+            <button
+              onClick={() => alert("Export feature coming soon")}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Download className="w-4 h-4" />
+              Export Results
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Average Score</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.average.toFixed(1)}%</p>
               </div>
-            ))}
+              <Trophy className="w-8 h-8 text-blue-500" />
+            </div>
           </div>
 
-          {/* All Students Progress */}
-          <div>
-            <h3 className="text-xl font-semibold mb-6">All Students Progress</h3>
-            <div className="space-y-5">
-              {results.allStudents.map((student) => (
-                <div key={student._id} className="group">
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="text-gray-800 font-medium text-lg">{student.name}</p>
-                    <p className="text-gray-800 font-bold text-lg">{student.score}%</p>
-                  </div>
-                  <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden shadow-inner">
-                    <div
-                      className="h-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 transition-all duration-1000 ease-out group-hover:shadow-lg"
-                      style={{ width: `${student.score}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Standard Deviation</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.standardDeviation.toFixed(1)}%</p>
+              </div>
+              <BarChart3 className="w-8 h-8 text-green-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Attempts</p>
+                <p className="text-2xl font-bold text-gray-900">{quizResults.length}</p>
+              </div>
+              <Users className="w-8 h-8 text-purple-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Pass Rate</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.passRate.toFixed(1)}%</p>
+              </div>
+              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
 
-function StatCard({
-  icon: Icon,
-  value,
-  label,
-  color,
-}: {
-  icon: any;
-  value: string;
-  label: string;
-  color: "blue" | "green" | "purple";
-}) {
-  const colors = {
-    blue: {
-      text: "text-blue-600",
-      bg: "from-blue-50 to-blue-100",
-      value: "text-blue-700",
-    },
-    green: {
-      text: "text-green-600",
-      bg: "from-green-50 to-green-100",
-      value: "text-green-700",
-    },
-    purple: {
-      text: "text-purple-600",
-      bg: "from-purple-50 to-purple-100",
-      value: "text-purple-700",
-    },
-  };
+        {/* Results Table */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Student Results</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Student
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Percentage
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Time Spent
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Submitted
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {quizResults.map((result) => (
+                  <tr key={result._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {result.studentName}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {result.score} / {result.totalQuestions}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="text-sm font-medium text-gray-900">
+                          {result.percentage.toFixed(1)}%
+                        </div>
+                        {result.percentage >= 70 ? (
+                          <CheckCircle className="w-4 h-4 text-green-500 ml-2" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500 ml-2" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {Math.floor(result.timeSpent / 60)}m {result.timeSpent % 60}s
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(result.submittedAt).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => router.push(`/teacher/quizzes/${quizId}/results/${result._id}`)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-  const c = colors[color];
-
-  return (
-    <div
-      className={`bg-gradient-to-br ${c.bg} rounded-3xl p-10 text-center shadow-lg hover:shadow-xl transition-all duration-300`}
-    >
-      <Icon className={`w-20 h-20 mx-auto mb-6 ${c.text}`} />
-      <p className={`text-6xl font-bold ${c.value} mb-3`}>{value}</p>
-      <p className="text-gray-700 text-xl font-medium">{label}</p>
+        {/* Empty State */}
+        {quizResults.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Results Yet</h3>
+            <p className="text-gray-600 mb-4">Students haven't taken this quiz yet.</p>
+            <Link
+              href="/teacher/quizzes"
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Back to Quizzes
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
