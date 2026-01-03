@@ -18,9 +18,9 @@ interface QuizDocument {
 
 export async function POST(request: NextRequest) {
   try {
-    // ✅ Extract quizId safely from URL
+    // ✅ Extract quizId from URL manually
     const parts = request.nextUrl.pathname.split("/");
-    const quizId = parts[parts.length - 2];
+    const quizId = parts[parts.length - 2]; // the second last segment
 
     if (!quizId || !ObjectId.isValid(quizId)) {
       return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });
@@ -31,11 +31,12 @@ export async function POST(request: NextRequest) {
     const quizzesCollection = db.collection<QuizDocument>("quizzes");
 
     const originalQuiz = await quizzesCollection.findOne({ _id: new ObjectId(quizId) });
+
     if (!originalQuiz) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
 
-    // Remove _id to insert as a new document
+    // Remove _id to insert a new quiz
     const { _id, ...quizWithoutId } = originalQuiz;
 
     const newQuiz: QuizDocument = {
