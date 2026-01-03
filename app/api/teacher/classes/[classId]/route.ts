@@ -1,4 +1,3 @@
-// app/api/teacher/classes/[classId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -10,11 +9,8 @@ function generateInviteLink(code: string): string {
 }
 
 // GET single class
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { classId: string } }
-): Promise<NextResponse> {
-  const { classId } = params;
+export async function GET(request: NextRequest, context: { params: any }) {
+  const classId = context.params.classId;
   console.log("[GET] classId:", classId);
 
   if (!ObjectId.isValid(classId)) {
@@ -37,7 +33,6 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Class not found or not authorized" }, { status: 404 });
     }
 
-    // Transform Mongo _id to string and add inviteLink
     const responseData = {
       ...classData,
       _id: classData._id.toString(),
@@ -52,12 +47,9 @@ export async function GET(
 }
 
 // DELETE class
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { classId: string } }
-): Promise<NextResponse> {
-  const { classId } = params;
-  console.log("[DELETE API] classId:", classId);
+export async function DELETE(request: NextRequest, context: { params: any }) {
+  const classId = context.params.classId;
+  console.log("[DELETE] classId:", classId);
 
   if (!classId || !ObjectId.isValid(classId)) {
     return NextResponse.json({ success: false, error: "Invalid class ID" }, { status: 400 });
