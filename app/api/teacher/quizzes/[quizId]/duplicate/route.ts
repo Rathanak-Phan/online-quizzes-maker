@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 
-/* ===============================
-   MongoDB Quiz Document Interface
-================================ */
 interface QuizDocument {
   _id?: ObjectId;
   title: string;
@@ -19,47 +16,23 @@ interface QuizDocument {
   [key: string]: any;
 }
 
-/* ===============================
-   POST - Duplicate Quiz (SAFE)
-================================ */
 export async function POST(request: NextRequest) {
   try {
-    // ✅ SAFE way (no params typing issues)
-    const pathnameParts = request.nextUrl.pathname.split("/");
-    const quizId = pathnameParts[pathnameParts.length - 2];
+    const parts = request.nextUrl.pathname.split("/");
+    const quizId = parts[parts.length - 2]; // extract quizId from URL
 
-    if (!quizId) {
-      return NextResponse.json(
-        { error: "No quiz ID provided" },
-        { status: 400 }
-      );
-    }
-
-    if (!ObjectId.isValid(quizId)) {
-      return NextResponse.json(
-        { error: "Invalid quiz ID format" },
-        { status: 400 }
-      );
+    if (!quizId || !ObjectId.isValid(quizId)) {
+      return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes");
     const quizzesCollection = db.collection<QuizDocument>("quizzes");
 
-    const originalQuiz = await quizzesCollection.findOne({
-      _id: new ObjectId(quizId),
-    });
+    const originalQuiz = await quizzesCollection.findOne({ _id: new ObjectId(quizId) });
+    if (!originalQuiz) return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
 
-    if (!originalQuiz) {
-      return NextResponse.json(
-        { error: "Quiz not found" },
-        { status: 404 }
-      );
-    }
-
-    // Remove _id safely
     const { _id, ...quizWithoutId } = originalQuiz;
-
     const newQuiz: QuizDocument = {
       ...quizWithoutId,
       title: `${originalQuiz.title} (Copy)`,
@@ -86,9 +59,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error duplicating quiz:", error);
-    return NextResponse.json(
-      { error: "Failed to duplicate quiz" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to duplicate quiz" }, { status: 500 });
   }
 }
