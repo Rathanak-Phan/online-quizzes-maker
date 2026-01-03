@@ -13,17 +13,12 @@ function generateInviteLink(code: string): string {
 export async function GET(
   request: NextRequest,
   { params }: { params: { classId: string } }
-) {
+): Promise<NextResponse> {
   const { classId } = params;
   console.log("[GET] classId:", classId);
 
-  // Validate ObjectId
   if (!ObjectId.isValid(classId)) {
-    console.warn("[GET] Invalid classId format");
-    return NextResponse.json(
-      { success: false, error: "Invalid class ID format" },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: "Invalid class ID format" }, { status: 400 });
   }
 
   try {
@@ -39,29 +34,20 @@ export async function GET(
     });
 
     if (!classData) {
-      console.warn("[GET] Class not found or not authorized");
-      return NextResponse.json(
-        { success: false, error: "Class not found or not authorized" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "Class not found or not authorized" }, { status: 404 });
     }
 
-    console.log("[GET] Class found:", classData.name);
+    // Transform Mongo _id to string and add inviteLink
+    const responseData = {
+      ...classData,
+      _id: classData._id.toString(),
+      inviteLink: classData.inviteLink || generateInviteLink(classData.code),
+    };
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...classData,
-        _id: classData._id.toString(),
-        inviteLink: classData.inviteLink || generateInviteLink(classData.code),
-      },
-    });
+    return NextResponse.json({ success: true, data: responseData });
   } catch (err) {
     console.error("[GET] MongoDB error:", err);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch class" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Failed to fetch class" }, { status: 500 });
   }
 }
 
@@ -69,16 +55,12 @@ export async function GET(
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { classId: string } }
-) {
+): Promise<NextResponse> {
   const { classId } = params;
   console.log("[DELETE API] classId:", classId);
 
-  // Validate ID
   if (!classId || !ObjectId.isValid(classId)) {
-    return NextResponse.json(
-      { success: false, error: "Invalid class ID" },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: "Invalid class ID" }, { status: 400 });
   }
 
   try {
@@ -90,18 +72,12 @@ export async function DELETE(
     });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { success: false, error: "Class not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: "Class not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);
-    return NextResponse.json(
-      { success: false, error: "Failed to delete class" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Failed to delete class" }, { status: 500 });
   }
 }
