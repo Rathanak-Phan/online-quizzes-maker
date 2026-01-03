@@ -45,43 +45,46 @@ const mockClasses = [
     name: "Mathematics 101",
     code: "MATH101",
     type: "public" as const,
-    description: "Introduction to basic mathematics concepts including algebra, geometry, and basic calculus. This course is designed for beginners.",
+    description:
+      "Introduction to basic mathematics concepts including algebra, geometry, and basic calculus. This course is designed for beginners.",
     students: 25,
     quizzes: 5,
     avgScore: 78.5,
     inviteLink: "http://localhost:3000/join/MATH101",
     createdAt: "2024-01-15T10:30:00Z",
     subject: "Mathematics",
-    schedule: "Mon/Wed 10:00 AM"
+    schedule: "Mon/Wed 10:00 AM",
   },
   {
     _id: "65b2c3d4e5f6789012345678",
     name: "Physics: Intro",
     code: "PHYS101",
     type: "private" as const,
-    description: "Fundamentals of physics covering motion, energy, and basic thermodynamics.",
+    description:
+      "Fundamentals of physics covering motion, energy, and basic thermodynamics.",
     students: 18,
     quizzes: 3,
     avgScore: 82.3,
     inviteLink: "http://localhost:3000/join/PHYS101",
     createdAt: "2024-02-01T14:00:00Z",
     subject: "Physics",
-    schedule: "Tue/Thu 2:00 PM"
+    schedule: "Tue/Thu 2:00 PM",
   },
   {
     _id: "65c3d4e5f678901234567890",
     name: "Chemistry Basics",
     code: "CHEM101",
     type: "public" as const,
-    description: "Introduction to chemistry concepts including elements, compounds, and chemical reactions.",
+    description:
+      "Introduction to chemistry concepts including elements, compounds, and chemical reactions.",
     students: 32,
     quizzes: 7,
     avgScore: 75.2,
     inviteLink: "http://localhost:3000/join/CHEM101",
     createdAt: "2024-02-10T09:15:00Z",
     subject: "Chemistry",
-    schedule: "Mon/Wed/Fri 11:00 AM"
-  }
+    schedule: "Mon/Wed/Fri 11:00 AM",
+  },
 ];
 
 export default function ClassDetailPage() {
@@ -121,10 +124,10 @@ export default function ClassDetailPage() {
       console.log("Response status:", res.status);
 
       // Check if we got a valid JSON response
-      const contentType = res.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         const data = await res.json();
-        
+
         if (!res.ok) {
           console.error("API error response:", data);
           throw new Error(data?.error || `Server error: ${res.status}`);
@@ -138,42 +141,44 @@ export default function ClassDetailPage() {
         console.log("Class data loaded from API:", data.data?.name);
         return;
       }
-      
+
       // If not JSON or API not available, use mock data
       throw new Error("API returned non-JSON response");
-      
     } catch (err) {
       console.log("API fetch failed, using mock data:", err);
       setUsingMockData(true);
-      
+
       // Find mock class data
-      let mockClass = mockClasses.find(c => c._id === classId);
-      
+      let mockClass = mockClasses.find((c) => c._id === classId);
+
       // Try partial match if exact not found
       if (!mockClass) {
-        mockClass = mockClasses.find(c => 
-          c._id.startsWith(classId) || 
-          classId.startsWith(c._id.substring(0, 8))
+        mockClass = mockClasses.find(
+          (c) =>
+            classId &&
+            (c._id.startsWith(classId) ||
+              classId.startsWith(c._id.substring(0, 8)))
         );
       }
-      
+
       // Use first mock class as fallback
       if (!mockClass) {
         mockClass = mockClasses[0];
       }
-      
+
       // Add fallback properties if missing
       const classDataWithDefaults: ClassData = {
         ...mockClass,
         avgScore: mockClass.avgScore || 0,
         quizzes: mockClass.quizzes || 0,
-        inviteLink: mockClass.inviteLink || `http://localhost:3000/join/${mockClass.code}`,
+        inviteLink:
+          mockClass.inviteLink ||
+          `http://localhost:3000/join/${mockClass.code}`,
         createdAt: mockClass.createdAt || new Date().toISOString(),
       };
-      
+
       setClassData(classDataWithDefaults);
       console.log("Using mock data:", classDataWithDefaults.name);
-      
     } finally {
       setLoading(false);
     }

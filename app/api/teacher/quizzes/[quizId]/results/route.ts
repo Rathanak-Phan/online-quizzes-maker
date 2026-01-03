@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Mock data
 const mockResults = [
   {
     _id: "1",
@@ -14,15 +13,21 @@ const mockResults = [
   },
 ];
 
+// Correct type: Next.js 16 expects `params` to possibly be a Promise
+type ParamsType = { params: { quizId: string } | Promise<{ quizId: string }> };
+
 export async function GET(
   request: NextRequest,
-  context: { params: { quizId: string } } // must be plain object, not a promise
+  context: ParamsType
 ) {
   try {
-    const { quizId } = context.params;
+    // Resolve params if it’s a promise
+    const resolvedParams =
+      context.params instanceof Promise
+        ? await context.params
+        : context.params;
 
-    // simulate delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    const { quizId } = resolvedParams;
 
     return NextResponse.json({
       quizId,

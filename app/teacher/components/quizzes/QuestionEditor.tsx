@@ -11,7 +11,7 @@ import {
   Link as LinkIcon,
   GripVertical,
 } from "lucide-react";
-import { Question } from "@/app/types/quiz";
+import { Question } from "@/types/quiz";
 
 interface QuestionEditorProps {
   question: Question;
@@ -30,23 +30,23 @@ export function QuestionEditor({
 }: QuestionEditorProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleTypeChange = (type: Question['type']) => {
+  const handleTypeChange = (type: Question["type"]) => {
     const updates: Partial<Question> = { type };
-    
-    if (type === 'multiple') {
+
+    if (type === "multiple-choice") {
       updates.options = ["", "", "", ""];
       updates.correctAnswer = 0;
-    } else if (type === 'truefalse') {
+    } else if (type === "true-false") {
       updates.options = undefined;
       updates.correctAnswer = true;
-    } else if (type === 'short') {
+    } else if (type === "short-answer") {
       updates.options = undefined;
       updates.correctAnswer = "";
-    } else if (type === 'essay') {
+    } else if (type === "essay") {
       updates.options = undefined;
       updates.correctAnswer = undefined;
     }
-    
+
     onUpdate(updates);
   };
 
@@ -60,16 +60,19 @@ export function QuestionEditor({
     if (question.options && question.options.length > 2) {
       const newOptions = [...question.options];
       newOptions.splice(optionIndex, 1);
-      
+
       // Adjust correct answer if needed
       let newCorrectAnswer = question.correctAnswer;
-      if (typeof newCorrectAnswer === 'number' && newCorrectAnswer >= optionIndex) {
+      if (
+        typeof newCorrectAnswer === "number" &&
+        newCorrectAnswer >= optionIndex
+      ) {
         newCorrectAnswer = Math.max(0, newCorrectAnswer - 1);
       }
-      
-      onUpdate({ 
+
+      onUpdate({
         options: newOptions,
-        correctAnswer: newCorrectAnswer 
+        correctAnswer: newCorrectAnswer,
       });
     }
   };
@@ -94,19 +97,25 @@ export function QuestionEditor({
             <div className="flex gap-2">
               <select
                 value={question.type}
-                onChange={(e) => handleTypeChange(e.target.value as Question['type'])}
+                onChange={(e) =>
+                  handleTypeChange(e.target.value as Question["type"])
+                }
                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium"
               >
-                <option value="multiple">Multiple Choice</option>
-                <option value="truefalse">True/False</option>
-                <option value="short">Short Answer</option>
+                <option value="multiple-choice">Multiple Choice</option>
+                <option value="true-false">True/False</option>
+                <option value="short-answer">Short Answer</option>
                 <option value="essay">Essay</option>
               </select>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
                   value={question.points}
-                  onChange={(e) => onUpdate({ points: Math.max(1, parseInt(e.target.value) || 10) })}
+                  onChange={(e) =>
+                    onUpdate({
+                      points: Math.max(1, parseInt(e.target.value) || 10),
+                    })
+                  }
                   min="1"
                   className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-center text-sm"
                 />
@@ -145,7 +154,7 @@ export function QuestionEditor({
       </div>
 
       {/* Question Options */}
-      {question.type === 'multiple' && question.options && (
+      {question.type === "multiple-choice" && question.options && (
         <div className="space-y-3 mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Options</span>
@@ -184,7 +193,7 @@ export function QuestionEditor({
         </div>
       )}
 
-      {question.type === 'truefalse' && (
+      {question.type === "true-false" && (
         <div className="flex gap-6 mb-6">
           <label className="flex items-center gap-3 cursor-pointer">
             <input
@@ -207,11 +216,11 @@ export function QuestionEditor({
         </div>
       )}
 
-      {question.type === 'short' && (
+      {question.type === "short-answer" && (
         <div className="mb-6">
           <input
             type="text"
-            value={question.correctAnswer as string || ""}
+            value={(question.correctAnswer as string) || ""}
             onChange={(e) => onUpdate({ correctAnswer: e.target.value })}
             placeholder="Expected answer (case insensitive)"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -225,7 +234,11 @@ export function QuestionEditor({
           onClick={() => setShowAdvanced(!showAdvanced)}
           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
         >
-          <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${
+              showAdvanced ? "rotate-180" : ""
+            }`}
+          />
           Advanced options
         </button>
       </div>
@@ -244,7 +257,7 @@ export function QuestionEditor({
               rows={2}
             />
           </div>
-          
+
           <div className="flex gap-2">
             <button className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
               <ImageIcon className="w-4 h-4" />

@@ -1,37 +1,28 @@
-// app/api/teacher/quizzes/[quizId]/route.ts - COMPLETE CLEAN VERSION
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 
-// GET - Fetch single quiz
-// GET - Fetch single quiz
-export async function GET(request: NextRequest) {
-  try {
-    // Extract quizId from URL
-    const url = new URL(request.url);
-    const pathSegments = url.pathname.split("/"); // ['', 'api', 'teacher', 'quizzes', '<quizId>']
-    const quizId = pathSegments[pathSegments.length - 1];
+// Helper to resolve params if promise
+async function resolveParams<T>(params: T | Promise<T>): Promise<T> {
+  return params instanceof Promise ? await params : params;
+}
 
-    if (!quizId) {
-      return NextResponse.json(
-        { error: "No quiz ID provided" },
-        { status: 400 }
-      );
-    }
+// GET - Fetch single quiz
+export async function GET(
+  request: NextRequest,
+  context: { params: { quizId: string } | Promise<{ quizId: string }> }
+) {
+  try {
+    const { quizId } = await resolveParams(context.params);
 
     if (!ObjectId.isValid(quizId)) {
-      return NextResponse.json(
-        { error: "Invalid quiz ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid quiz ID format" }, { status: 400 });
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes-maker");
 
-    const quiz = await db
-      .collection("quizzes")
-      .findOne({ _id: new ObjectId(quizId) });
+    const quiz = await db.collection("quizzes").findOne({ _id: new ObjectId(quizId) });
 
     if (!quiz) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
@@ -48,42 +39,29 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error fetching quiz:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch quiz" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch quiz" }, { status: 500 });
   }
 }
 
 // PUT - Update quiz
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { quizId: string } }
+  context: { params: { quizId: string } | Promise<{ quizId: string }> }
 ) {
   try {
-    const quizId = params.quizId;
+    const { quizId } = await resolveParams(context.params);
     const data = await request.json();
 
     if (!ObjectId.isValid(quizId)) {
-      return NextResponse.json(
-        { error: "Invalid quiz ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid quiz ID format" }, { status: 400 });
     }
 
-    // Validation
     if (!data.title?.trim()) {
-      return NextResponse.json(
-        { error: "Quiz title is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Quiz title is required" }, { status: 400 });
     }
 
     if (!data.category?.trim()) {
-      return NextResponse.json(
-        { error: "Category is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Category is required" }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -100,18 +78,16 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    const result = await db
-      .collection("quizzes")
-      .updateOne({ _id: new ObjectId(quizId) }, { $set: updateData });
+    const result = await db.collection("quizzes").updateOne(
+      { _id: new ObjectId(quizId) },
+      { $set: updateData }
+    );
 
     if (result.matchedCount === 0) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
 
-    // Get updated quiz
-    const updatedQuiz = await db.collection("quizzes").findOne({
-      _id: new ObjectId(quizId),
-    });
+    const updatedQuiz = await db.collection("quizzes").findOne({ _id: new ObjectId(quizId) });
 
     return NextResponse.json({
       success: true,
@@ -124,41 +100,26 @@ export async function PUT(
     });
   } catch (error: any) {
     console.error("Error updating quiz:", error);
-    return NextResponse.json(
-      { error: "Failed to update quiz" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update quiz" }, { status: 500 });
   }
 }
 
-// DELETE - Delete quiz (ONLY ONE DELETE FUNCTION!)
-export async function DELETE(request: NextRequest) {
+// DELETE - Delete quiz
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { quizId: string } | Promise<{ quizId: string }> }
+) {
   try {
-    // Extract quizId from URL
-    const url = new URL(request.url);
-    const pathSegments = url.pathname.split("/"); // [ '', 'api', 'teacher', 'quizzes', '<quizId>' ]
-    const quizId = pathSegments[pathSegments.length - 1];
-
-    if (!quizId) {
-      return NextResponse.json(
-        { error: "No quiz ID provided" },
-        { status: 400 }
-      );
-    }
+    const { quizId } = await resolveParams(context.params);
 
     if (!ObjectId.isValid(quizId)) {
-      return NextResponse.json(
-        { error: "Invalid quiz ID format" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid quiz ID format" }, { status: 400 });
     }
 
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes-maker");
 
-    const result = await db.collection("quizzes").deleteOne({
-      _id: new ObjectId(quizId),
-    });
+    const result = await db.collection("quizzes").deleteOne({ _id: new ObjectId(quizId) });
 
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
@@ -171,9 +132,6 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error deleting quiz:", error);
-    return NextResponse.json(
-      { error: "Failed to delete quiz", details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete quiz" }, { status: 500 });
   }
 }

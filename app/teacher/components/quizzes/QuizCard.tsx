@@ -20,6 +20,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import type { Quiz as QuizType } from "@/types/quiz";
 
 interface Quiz {
   _id: string;
@@ -35,14 +36,20 @@ interface Quiz {
   isTemplate: boolean;
 }
 
+
 interface QuizCardProps {
-  quiz: Quiz;
+  quiz: QuizType;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
   onShare?: (id: string) => void;
 }
 
-export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps) {
+export function QuizCard({
+  quiz,
+  onDelete,
+  onDuplicate,
+  onShare,
+}: QuizCardProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -51,44 +58,44 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
-  const getStatusConfig = (status: Quiz['status']) => {
+  const getStatusConfig = (status: Quiz["status"]) => {
     switch (status) {
-      case 'active':
-        return { 
-          color: 'bg-green-100 text-green-800',
+      case "active":
+        return {
+          color: "bg-green-100 text-green-800",
           icon: CheckCircle,
-          label: 'Active' 
+          label: "Active",
         };
-      case 'completed':
-        return { 
-          color: 'bg-blue-100 text-blue-800',
+      case "completed":
+        return {
+          color: "bg-blue-100 text-blue-800",
           icon: CheckCircle,
-          label: 'Completed' 
+          label: "Completed",
         };
-      case 'draft':
-        return { 
-          color: 'bg-yellow-100 text-yellow-800',
+      case "draft":
+        return {
+          color: "bg-yellow-100 text-yellow-800",
           icon: XCircle,
-          label: 'Draft' 
+          label: "Draft",
         };
       default:
-        return { 
-          color: 'bg-gray-100 text-gray-800',
+        return {
+          color: "bg-gray-100 text-gray-800",
           icon: CheckCircle,
-          label: 'Unknown' 
+          label: "Unknown",
         };
     }
   };
@@ -100,11 +107,9 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
     if (onShare) {
       onShare(quiz._id);
     } else {
-      // Default share behavior
       const link = `${window.location.origin}/quiz/${quiz._id}`;
       navigator.clipboard.writeText(link);
       setShowDropdown(false);
-      // You might want to show a toast here
     }
   };
 
@@ -115,7 +120,9 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1 pr-8">
             <div className="flex items-center gap-2 mb-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusConfig.color}`}>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${statusConfig.color}`}
+              >
                 <StatusIcon className="w-3 h-3" />
                 {statusConfig.label}
               </span>
@@ -219,7 +226,9 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
               <FileText className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{quiz.questions}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {quiz.questions.length}
+              </p>
               <p className="text-sm text-gray-600">Questions</p>
             </div>
           </div>
@@ -228,7 +237,9 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
               <Users className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{quiz.assignedClasses}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {quiz.assignedClasses}
+              </p>
               <p className="text-sm text-gray-600">Classes</p>
             </div>
           </div>
@@ -237,7 +248,9 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
               <Clock className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{quiz.timeLimit}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {quiz.timeLimit}
+              </p>
               <p className="text-sm text-gray-600">Minutes</p>
             </div>
           </div>
@@ -247,7 +260,7 @@ export function QuizCard({ quiz, onDelete, onDuplicate, onShare }: QuizCardProps
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {quiz.avgScore !== null ? `${quiz.avgScore}%` : '--'}
+                {quiz.avgScore !== null ? `${quiz.avgScore}%` : "--"}
               </p>
               <p className="text-sm text-gray-600">Avg Score</p>
             </div>

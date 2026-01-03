@@ -1,8 +1,35 @@
 // lib/auth.ts
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import clientPromise from "./mongodb";
+
+// Allowed roles
+export type UserRole = "teacher" | "user" | "admin";
+
+// Extend session to include our custom fields
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      role: UserRole;
+      isValidated: boolean;
+      adSkipping: boolean;
+    } & DefaultSession["user"];
+  }
+}
+
+// Extend JWT to include our custom fields
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: UserRole;
+    isValidated: boolean;
+    adSkipping: boolean;
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,10 +44,10 @@ export const authOptions: NextAuthOptions = {
 
         try {
           const client = await clientPromise;
-          const users = client.db().collection('users');
+          const users = client.db().collection("users");
 
-          const user = await users.findOne({ 
-            email: credentials.email.toLowerCase() 
+          const user = await users.findOne({
+            email: credentials.email.toLowerCase(),
           });
 
           if (!user || !user.password) return null;
@@ -29,7 +56,7 @@ export const authOptions: NextAuthOptions = {
           if (!isValid) return null;
 
           // Block unvalidated teachers
-          if (user.role === 'teacher' && !user.isValidated) {
+          if (user.role === "teacher" && !user.isValidated) {
             throw new Error("Teacher account pending approval");
           }
 
@@ -37,9 +64,9 @@ export const authOptions: NextAuthOptions = {
             id: user._id.toString(),
             name: user.name,
             email: user.email,
-            role: user.role,
-            isValidated: user.isValidated,
-            adSkipping: user.adSkipping,
+            role: user.role as UserRole,
+            isValidated: user.isValidated ?? false,
+            adSkipping: user.adSkipping ?? false,
           };
         } catch (error) {
           console.error("Auth error:", error);
@@ -60,7 +87,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        token.role = user.role as UserRole;
         token.isValidated = user.isValidated;
         token.adSkipping = user.adSkipping;
       }
@@ -68,12 +95,18 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.isValidated = token.isValidated as boolean;
-        session.user.adSkipping = token.adSkipping as boolean;
+        // Validate role strictly
+        const role: UserRole =
+          token.role === "teacher" || token.role === "user" || token.role === "admin"
+            ? token.role
+            : "user";
+
+        session.user.id = token.id;
+        session.user.role = role;
+        session.user.isValidated = token.isValidated ?? false;
+        session.user.adSkipping = token.adSkipping ?? false;
       }
       return session;
-    }
-  }
+    },
+  },
 };

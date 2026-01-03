@@ -11,6 +11,7 @@ export default function Header() {
   const [user, setUser] = useState<{
     id: number;
     name: string;
+    email: string; // <--- add this
     role: string;
     profileImage?: string;
   } | null>(null);
@@ -136,9 +137,7 @@ export default function Header() {
                         <h3 className="text-gray-900 text-lg font-bold">
                           {user.name}
                         </h3>
-                        <p className="text-gray-500 text-sm">
-                          {user.email}
-                        </p>
+                        <p className="text-gray-500 text-sm">{user.email}</p>
                       </div>
                     </div>
                   </div>

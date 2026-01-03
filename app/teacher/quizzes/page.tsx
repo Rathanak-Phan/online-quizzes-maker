@@ -438,7 +438,7 @@ export default function QuizzesPage() {
             actionText="Create New Quiz"
             actionLink="/teacher/quizzes/new"
             showSearchIllustration={
-              debouncedSearchTerm ||
+              Boolean(debouncedSearchTerm) ||
               statusFilter !== "all" ||
               categoryFilter !== "all"
             }
