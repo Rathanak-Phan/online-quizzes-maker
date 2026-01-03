@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Users, School, FileText, Trophy, Clock, Award } from "lucide-react";
+import { Users, School, FileText, Trophy, Clock, Award, Trash2 } from "lucide-react";
 
 interface TeacherStats {
   totalClasses: number;
@@ -48,26 +48,26 @@ export default function TeacherDashboard() {
       const user = JSON.parse(storedUser);
       setTeacherName(user.name || "Teacher");
 
-      // Fetch real stats and classes
+      // Fetch stats and classes from API
       const [statsRes, classesRes] = await Promise.all([
         fetch("/api/teacher/stats"),
         fetch("/api/teacher/classes"),
       ]);
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData.stats);
+      if (!statsRes.ok || !classesRes.ok) {
+        throw new Error("Failed to fetch data from server");
       }
 
-      if (classesRes.ok) {
-        const classesData = await classesRes.json();
-        setClasses(classesData.classes || []);
-      }
+      const statsData = await statsRes.json();
+      const classesData = await classesRes.json();
+
+      setStats(statsData.stats);
+      setClasses(classesData.classes || []);
 
     } catch (err) {
       console.error("Failed to load dashboard:", err);
       setError("Failed to load data");
-      // Fallback mock data
+      // Optional fallback mock data
       setStats({
         totalClasses: 12,
         totalStudents: 348,
@@ -86,18 +86,29 @@ export default function TeacherDashboard() {
     }
   };
 
+  const deleteClass = async (classId: string) => {
+    if (!confirm("Are you sure you want to delete this class?")) return;
+
+    try {
+      const res = await fetch(`/api/teacher/classes/${classId}`, { method: "DELETE" });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setClasses(prev => prev.filter(c => c._id !== classId));
+        alert("Class deleted successfully!");
+      } else {
+        alert("Failed to delete class: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting class");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-2xl text-gray-600">Loading dashboard...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-red-600 text-xl">{error}</div>
       </div>
     );
   }
@@ -109,9 +120,7 @@ export default function TeacherDashboard() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Welcome back, {teacherName}!
           </h1>
-          <p className="text-xl text-gray-600 mb-10">
-            Manage your classes and quizzes.
-          </p>
+          <p className="text-xl text-gray-600 mb-10">Manage your classes and quizzes.</p>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-12">
@@ -164,9 +173,18 @@ export default function TeacherDashboard() {
                       <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                         {cls.status}
                       </span>
-                      <Link href={`/teacher/classes/${cls._id}`} className="text-blue-600 hover:text-blue-800 font-medium">
-                        View →
-                      </Link>
+                      <div className="flex gap-2">
+                        <Link href={`/teacher/classes/${cls._id}`} className="text-blue-600 hover:text-blue-800 font-medium">
+                          View →
+                        </Link>
+                        <button
+                          onClick={() => deleteClass(cls._id)}
+                          className="flex items-center gap-1 px-3 py-1 text-red-600 bg-red-50 rounded hover:bg-red-100 font-medium"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

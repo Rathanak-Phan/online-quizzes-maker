@@ -84,22 +84,22 @@ export default function ClassesPage() {
     }
   };
 
-  const deleteClass = async (id: string) => {
-    if (!confirm("Are you sure? This will delete the class permanently."))
-      return;
-
+  const deleteClass = async (classId: string) => {
     try {
-      const res = await fetch(`/api/teacher/classes/${id}`, {
+      const res = await fetch(`/api/teacher/classes/${classId}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        setClasses(classes.filter((c) => c._id !== id));
-        setOpenDropdown(null);
+      const data = await res.json();
+
+      if (data.success) {
+        setClasses((prev) => prev.filter((c) => c._id !== classId));
+        alert("Class deleted successfully!");
       } else {
-        alert("Failed to delete class");
+        alert("Error: " + data.error);
       }
     } catch (err) {
-      alert("Error deleting class");
+      console.error(err);
+      alert("Something went wrong while deleting the class.");
     }
   };
 
@@ -324,25 +324,24 @@ export default function ClassesPage() {
         </div>
 
         {/* Classes Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Existing Classes */}
           {filtered.map((cls) => (
             <div
               key={cls._id}
-              className="group relative bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer hover:-translate-y-1"
+              className="group relative bg-white rounded-2xl border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1"
               onClick={() =>
                 (window.location.href = `/teacher/classes/${cls._id}`)
               }
             >
-              {/* Clickable Class Content */}
-              <div className="p-5">
-                {/* Class Name */}
-                <h3 className="text-lg font-bold text-gray-900 mb-3 line-clamp-2 group-hover:text-blue-600 transition-colors">
+              {/* Card Header */}
+              <div className="p-5 flex flex-col h-full">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
                   {cls.name}
                 </h3>
 
                 {/* Class Code */}
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs text-gray-500 font-medium">
                     Code:
                   </span>
@@ -351,30 +350,26 @@ export default function ClassesPage() {
                   </code>
                 </div>
 
-                {/* Student Count & Schedule */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="flex items-center gap-1.5">
+                {/* Stats */}
+                <div className="flex items-center gap-4 mb-4 text-sm text-gray-700">
+                  <div className="flex items-center gap-1">
                     <Users className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">
+                    <span>
                       {cls.students} Student{cls.students !== 1 ? "s" : ""}
                     </span>
                   </div>
-
                   {cls.schedule && (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">
-                        {cls.schedule}
-                      </span>
+                      <span>{cls.schedule}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Bottom row with Manage Students and Privacy Badge */}
-                <div className="flex items-center justify-between">
-                  {/* Manage Students Button */}
+                {/* Manage Students & Badge */}
+                <div className="flex items-center justify-between mt-auto">
                   <div
-                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex-1"
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex-1 justify-center"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.location.href = `/teacher/classes/${cls._id}/students`;
@@ -384,9 +379,8 @@ export default function ClassesPage() {
                     <span>Manage Students</span>
                   </div>
 
-                  {/* Public/Private Badge - Bottom right (icon only) */}
                   <div
-                    className={`ml-3 p-2 rounded-lg ${
+                    className={`ml-3 p-2 rounded-xl ${
                       cls.type === "public"
                         ? "bg-green-100 text-green-700"
                         : "bg-amber-100 text-amber-700"
@@ -404,7 +398,7 @@ export default function ClassesPage() {
                 </div>
               </div>
 
-              {/* Top-right dropdown for essential options (no delete) */}
+              {/* Top-right Dropdown */}
               <div
                 className="absolute top-3 right-3 z-10"
                 onClick={(e) => e.stopPropagation()}
@@ -419,38 +413,35 @@ export default function ClassesPage() {
                   </button>
 
                   {openDropdown === cls._id && (
-                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden animate-in scale-in origin-top-right">
                       <div className="py-1">
-                        {/* View Details */}
                         <button
                           onClick={() => {
                             setOpenDropdown(null);
                             window.location.href = `/teacher/classes/${cls._id}`;
                           }}
-                          className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-gray-50 text-gray-700"
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
                         >
                           <Eye className="w-4 h-4" />
                           <span className="font-medium">View Details</span>
                         </button>
 
-                        {/* Edit Class */}
                         <Link
                           href={`/teacher/classes/${cls._id}/edit`}
                           onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700"
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
                         >
                           <Edit3 className="w-4 h-4" />
                           <span className="font-medium">Edit Class</span>
                         </Link>
 
-                        {/* Copy Invite Link */}
                         {cls.inviteLink && (
                           <button
                             onClick={() => {
                               copyInviteLink(cls.inviteLink!, cls._id);
                               setOpenDropdown(null);
                             }}
-                            className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-gray-50 text-gray-700"
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
                           >
                             {copiedId === cls._id ? (
                               <>
@@ -470,15 +461,37 @@ export default function ClassesPage() {
                           </button>
                         )}
 
-                        {/* Settings (for future additional options) */}
                         <Link
                           href={`/teacher/classes/${cls._id}/settings`}
                           onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700"
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
                         >
                           <Settings className="w-4 h-4" />
                           <span className="font-medium">More Settings</span>
                         </Link>
+
+                        {/* Delete Class */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click navigation
+                            setOpenDropdown(null);
+
+                            // Confirm before deleting
+                            if (
+                              !confirm(
+                                "Are you sure you want to delete this class?"
+                              )
+                            )
+                              return;
+
+                            // Call delete function
+                            deleteClass(cls._id);
+                          }}
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-red-50 text-red-600 w-full"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="font-medium">Delete Class</span>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -487,10 +500,10 @@ export default function ClassesPage() {
             </div>
           ))}
 
-          {/* Add New Class Card - Always visible */}
+          {/* Add New Class Card */}
           <Link
             href="/teacher/classes/new"
-            className="border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center p-8 hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 group"
+            className="border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center p-8 hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 group"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
@@ -504,7 +517,7 @@ export default function ClassesPage() {
             </p>
           </Link>
         </div>
-        
+
         {/* Empty State */}
         {filtered.length === 0 && (
           <div className="text-center py-16 px-6">

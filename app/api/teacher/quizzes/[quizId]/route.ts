@@ -4,12 +4,20 @@ import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 
 // GET - Fetch single quiz
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { quizId: string } }
-) {
+// GET - Fetch single quiz
+export async function GET(request: NextRequest) {
   try {
-    const quizId = params.quizId;
+    // Extract quizId from URL
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split("/"); // ['', 'api', 'teacher', 'quizzes', '<quizId>']
+    const quizId = pathSegments[pathSegments.length - 1];
+
+    if (!quizId) {
+      return NextResponse.json(
+        { error: "No quiz ID provided" },
+        { status: 400 }
+      );
+    }
 
     if (!ObjectId.isValid(quizId)) {
       return NextResponse.json(
@@ -19,30 +27,24 @@ export async function GET(
     }
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'online-quizzes-maker');
+    const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes-maker");
 
-    const quiz = await db.collection("quizzes").findOne({
-      _id: new ObjectId(quizId)
-    });
+    const quiz = await db
+      .collection("quizzes")
+      .findOne({ _id: new ObjectId(quizId) });
 
     if (!quiz) {
-      return NextResponse.json(
-        { error: "Quiz not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
-
-    // Format the response
-    const formattedQuiz = {
-      ...quiz,
-      _id: quiz._id.toString(),
-      teacherId: quiz.teacherId.toString(),
-      questions: quiz.questions || [],
-    };
 
     return NextResponse.json({
       success: true,
-      quiz: formattedQuiz,
+      quiz: {
+        ...quiz,
+        _id: quiz._id.toString(),
+        teacherId: quiz.teacherId.toString(),
+        questions: quiz.questions || [],
+      },
     });
   } catch (error: any) {
     console.error("Error fetching quiz:", error);
@@ -85,7 +87,7 @@ export async function PUT(
     }
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'online-quizzes-maker');
+    const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes-maker");
 
     const updateData = {
       title: data.title.trim(),
@@ -98,21 +100,17 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    const result = await db.collection("quizzes").updateOne(
-      { _id: new ObjectId(quizId) },
-      { $set: updateData }
-    );
+    const result = await db
+      .collection("quizzes")
+      .updateOne({ _id: new ObjectId(quizId) }, { $set: updateData });
 
     if (result.matchedCount === 0) {
-      return NextResponse.json(
-        { error: "Quiz not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
 
     // Get updated quiz
     const updatedQuiz = await db.collection("quizzes").findOne({
-      _id: new ObjectId(quizId)
+      _id: new ObjectId(quizId),
     });
 
     return NextResponse.json({
@@ -134,58 +132,47 @@ export async function PUT(
 }
 
 // DELETE - Delete quiz (ONLY ONE DELETE FUNCTION!)
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { quizId: string } }
-) {
+export async function DELETE(request: NextRequest) {
   try {
-    const quizId = params.quizId;
+    // Extract quizId from URL
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split("/"); // [ '', 'api', 'teacher', 'quizzes', '<quizId>' ]
+    const quizId = pathSegments[pathSegments.length - 1];
 
-    console.log("DELETE request for quiz ID:", quizId);
+    if (!quizId) {
+      return NextResponse.json(
+        { error: "No quiz ID provided" },
+        { status: 400 }
+      );
+    }
 
     if (!ObjectId.isValid(quizId)) {
       return NextResponse.json(
-        { 
-          error: "Invalid quiz ID format",
-          receivedId: quizId
-        },
+        { error: "Invalid quiz ID format" },
         { status: 400 }
       );
     }
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'online-quizzes-maker');
+    const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes-maker");
 
-    // Delete the quiz
     const result = await db.collection("quizzes").deleteOne({
-      _id: new ObjectId(quizId)
+      _id: new ObjectId(quizId),
     });
-
-    console.log("Delete result:", result);
 
     if (result.deletedCount === 0) {
-      return NextResponse.json(
-        { error: "Quiz not found", receivedId: quizId },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
     }
-
-    // Also delete related results (optional)
-    await db.collection("quiz_results").deleteMany({
-      quizId: new ObjectId(quizId)
-    });
 
     return NextResponse.json({
       success: true,
       message: "Quiz deleted successfully",
+      deletedId: quizId,
     });
   } catch (error: any) {
     console.error("Error deleting quiz:", error);
     return NextResponse.json(
-      { 
-        error: "Failed to delete quiz",
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
+      { error: "Failed to delete quiz", details: error.message },
       { status: 500 }
     );
   }

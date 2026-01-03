@@ -67,36 +67,60 @@ export default function QuizzesPage() {
       console.log("Fetching from MongoDB Atlas...");
       console.log("API URL:", `/api/teacher/quizzes?${params.toString()}`);
 
-      const response = await fetch(`/api/teacher/quizzes?${params.toString()}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
+      const response = await fetch(
+        `/api/teacher/quizzes?${params.toString()}`,
+        {
+          headers: {
+            "Cache-Control": "no-cache",
+          },
         }
-      });
+      );
 
       console.log("Response status:", response.status);
-      console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+      console.log(
+        "Response headers:",
+        Object.fromEntries(response.headers.entries())
+      );
 
       if (!response.ok) {
         let errorData;
         try {
           errorData = await response.json();
         } catch {
-          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+          errorData = {
+            message: `HTTP ${response.status}: ${response.statusText}`,
+          };
         }
-        
+
         console.error("API Error details:", errorData);
-        throw new Error(errorData.error || errorData.message || "Failed to fetch quizzes");
+        throw new Error(
+          errorData.error || errorData.message || "Failed to fetch quizzes"
+        );
       }
 
       const data = await response.json();
+
+      if (data.quizzes && data.quizzes.length > 0) {
+        console.log("First quiz from API:", {
+          id: data.quizzes[0]._id,
+          title: data.quizzes[0].title,
+          status: data.quizzes[0].status,
+          category: data.quizzes[0].category,
+          questionsType: typeof data.quizzes[0].questions,
+          questionsValue: data.quizzes[0].questions,
+          hasQuestionsArray: Array.isArray(data.quizzes[0].questions),
+          questionsLength: data.quizzes[0].questions?.length || 0,
+        });
+      }
+
       console.log("Data received from Atlas:", {
         count: data.quizzes?.length || 0,
         source: data.source || "unknown",
-        data: data // Log full data for debugging
+        data: data, // Log full data for debugging
       });
 
       setQuizzes(data.quizzes || []);
-      
+
       // Extract categories
       const uniqueCategories = Array.from(
         new Set(
@@ -108,39 +132,10 @@ export default function QuizzesPage() {
       console.error("Fetch error:", err);
       setError(err.message || "Failed to load quizzes");
       setQuizzes([]); // Empty array on error
-      
+
       // Temporary: Show some mock data for debugging
       console.log("Using mock data for debugging...");
-      setQuizzes([
-        {
-          _id: "mock-1",
-          title: "Sample Mathematics Quiz",
-          description: "Basic algebra and geometry questions",
-          category: "Mathematics",
-          questions: 10,
-          assignedClasses: 3,
-          avgScore: 85.5,
-          status: "active",
-          lastUsed: new Date().toISOString(),
-          timeLimit: 30,
-          createdAt: new Date().toISOString(),
-          isTemplate: false,
-        },
-        {
-          _id: "mock-2",
-          title: "Sample Science Quiz",
-          description: "General science knowledge",
-          category: "Science",
-          questions: 15,
-          assignedClasses: 2,
-          avgScore: 72.3,
-          status: "draft",
-          lastUsed: new Date(Date.now() - 86400000).toISOString(),
-          timeLimit: 45,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          isTemplate: false,
-        }
-      ]);
+      setQuizzes([]);
       setCategories(["Mathematics", "Science"]);
       setError(null); // Clear error for now
     } finally {
@@ -162,6 +157,13 @@ export default function QuizzesPage() {
 
   // Handle quiz actions
   const handleDelete = async (quizId: string) => {
+    console.log("Attempting to delete quiz:", {
+      quizId,
+      quizIdLength: quizId.length,
+      quizIdType: typeof quizId,
+      isValidObjectId: quizId.match(/^[0-9a-fA-F]{24}$/) ? "Yes" : "No",
+    });
+
     if (
       !confirm(
         "Are you sure you want to delete this quiz? This action cannot be undone."
@@ -171,19 +173,53 @@ export default function QuizzesPage() {
     }
 
     try {
+      console.log(
+        "Sending DELETE request to:",
+        `/api/teacher/quizzes/${quizId}`
+      );
+
       const response = await fetch(`/api/teacher/quizzes/${quizId}`, {
         method: "DELETE",
       });
 
+      console.log("Response status:", response.status);
+
+      const responseText = await response.text();
+      console.log("Response text:", responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { error: "Invalid JSON response" };
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to delete quiz");
+        throw new Error(
+          responseData.error || `HTTP ${response.status}: Failed to delete quiz`
+        );
       }
 
       // Optimistic update
-      setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
+      setQuizzes((prev) => {
+        const newQuizzes = prev.filter((q) => q._id !== quizId);
+        console.log("Optimistic update:", {
+          before: prev.length,
+          after: newQuizzes.length,
+          deletedId: quizId,
+        });
+        return newQuizzes;
+      });
+
+      console.log("Quiz deleted successfully:", quizId);
     } catch (err: any) {
-      console.error("Failed to delete quiz:", err);
-      alert(err.message || "Error deleting quiz");
+      console.error("Failed to delete quiz:", {
+        error: err.message,
+        quizId,
+        fullError: err,
+      });
+      alert(`Error: ${err.message}\n\nCheck console for details.`);
+
       // Re-fetch to restore state
       fetchQuizzes();
     }
@@ -214,9 +250,9 @@ export default function QuizzesPage() {
       searchTerm: debouncedSearchTerm,
       statusFilter,
       categoryFilter,
-      sortBy
+      sortBy,
     });
-    
+
     return quizzes
       .filter((quiz) => {
         const matchesSearch =
@@ -307,12 +343,12 @@ export default function QuizzesPage() {
     quizzes: quizzes.length,
     filteredQuizzes: filteredQuizzes.length,
     categories: categories.length,
-    loading
+    loading,
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <header className="mb-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -410,26 +446,34 @@ export default function QuizzesPage() {
         )}
 
         {/* Debug info (remove in production) */}
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === "development" && (
           <div className="mt-8 p-4 bg-gray-100 rounded-lg">
             <details>
-              <summary className="cursor-pointer font-medium">Debug Info</summary>
+              <summary className="cursor-pointer font-medium">
+                Debug Info
+              </summary>
               <div className="mt-2 text-sm">
                 <p>Quizzes: {quizzes.length}</p>
                 <p>Filtered: {filteredQuizzes.length}</p>
-                <p>Categories: {categories.join(', ')}</p>
-                <p>Loading: {loading ? 'Yes' : 'No'}</p>
-                <p>Error: {error || 'None'}</p>
-                <button 
-                  onClick={() => fetchQuizzes()} 
+                <p>Categories: {categories.join(", ")}</p>
+                <p>Loading: {loading ? "Yes" : "No"}</p>
+                <p>Error: {error || "None"}</p>
+                <button
+                  onClick={() => fetchQuizzes()}
                   className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded"
                 >
                   Refetch
                 </button>
-                <button 
+                <button
                   onClick={() => {
-                    console.log("Current state:", { quizzes, filteredQuizzes, categories, loading, error });
-                  }} 
+                    console.log("Current state:", {
+                      quizzes,
+                      filteredQuizzes,
+                      categories,
+                      loading,
+                      error,
+                    });
+                  }}
                   className="mt-2 ml-2 px-3 py-1 bg-gray-500 text-white text-xs rounded"
                 >
                   Log State

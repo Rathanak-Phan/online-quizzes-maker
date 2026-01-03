@@ -1,13 +1,13 @@
-// app/types/quiz.ts
+// types/quiz.ts
 export interface Quiz {
   _id: string;
   title: string;
   description: string;
   category: string;
-  questions: number;
+  questions: Question[]; // This should be an array, not a number!
   assignedClasses: number;
   avgScore: number | null;
-  status: 'active' | 'completed' | 'draft';
+  status: 'active' | 'completed' | 'draft'; // Check if your API uses 'completed' or 'active'
   lastUsed: string;
   timeLimit: number;
   createdAt: string;
@@ -16,42 +16,13 @@ export interface Quiz {
   isTemplate: boolean;
 }
 
+// Make sure Question interface is defined
 export interface Question {
   _id?: string;
   text: string;
-  type: 'multiple' | 'truefalse' | 'short' | 'essay';
+  type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
   points: number;
   options?: string[];
-  correctAnswer?: number | boolean | string;
+  correctAnswer?: string | number | boolean;
   explanation?: string;
-}
-
-export interface QuizResult {
-  _id: string;
-  quizId: string;
-  studentId: string;
-  studentName: string;
-  score: number;
-  totalPoints: number;
-  percentage: number;
-  timeSpent: number; // in minutes
-  submittedAt: string;
-  answers: Answer[];
-}
-
-export interface Answer {
-  questionId: string;
-  selectedAnswer: string | boolean;
-  isCorrect: boolean;
-  pointsEarned: number;
-}
-
-export interface QuizTemplate {
-  _id: string;
-  name: string;
-  description: string;
-  category: string;
-  questions: number;
-  uses: number;
-  createdAt: string;
 }
