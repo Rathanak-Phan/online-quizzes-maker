@@ -20,15 +20,13 @@ interface QuizDocument {
 }
 
 /* ===============================
-   POST - Duplicate Quiz (Next.js 16)
+   POST - Duplicate Quiz (SAFE)
 ================================ */
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ quizId: string }> }
-) {
+export async function POST(request: NextRequest) {
   try {
-    // ✅ REQUIRED in Next.js 16
-    const { quizId } = await context.params;
+    // ✅ SAFE way (no params typing issues)
+    const pathnameParts = request.nextUrl.pathname.split("/");
+    const quizId = pathnameParts[pathnameParts.length - 2];
 
     if (!quizId) {
       return NextResponse.json(
@@ -44,12 +42,10 @@ export async function POST(
       );
     }
 
-    // Connect to MongoDB
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB_NAME || "online-quizzes");
     const quizzesCollection = db.collection<QuizDocument>("quizzes");
 
-    // Find original quiz
     const originalQuiz = await quizzesCollection.findOne({
       _id: new ObjectId(quizId),
     });
@@ -64,7 +60,6 @@ export async function POST(
     // Remove _id safely
     const { _id, ...quizWithoutId } = originalQuiz;
 
-    // Create duplicated quiz
     const newQuiz: QuizDocument = {
       ...quizWithoutId,
       title: `${originalQuiz.title} (Copy)`,
@@ -75,22 +70,18 @@ export async function POST(
       updatedAt: new Date(),
     };
 
-    // Insert duplicated quiz
     const result = await quizzesCollection.insertOne(newQuiz);
-
-    // Response
-    const createdQuiz = {
-      ...newQuiz,
-      _id: result.insertedId.toString(),
-      teacherId: newQuiz.teacherId?.toString(),
-      questions: newQuiz.questions?.length || 0,
-      assignedClasses: newQuiz.assignedClassIds?.length || 0,
-      avgScore: null,
-    };
 
     return NextResponse.json({
       success: true,
-      quiz: createdQuiz,
+      quiz: {
+        ...newQuiz,
+        _id: result.insertedId.toString(),
+        teacherId: newQuiz.teacherId?.toString(),
+        questions: newQuiz.questions?.length || 0,
+        assignedClasses: newQuiz.assignedClassIds?.length || 0,
+        avgScore: null,
+      },
       message: "Quiz duplicated successfully",
     });
   } catch (error) {
