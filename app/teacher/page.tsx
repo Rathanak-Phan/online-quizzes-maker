@@ -114,9 +114,9 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl p-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full mx-auto">
+        <div className="bg-white shadow-xl p-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Welcome back, {teacherName}!
           </h1>

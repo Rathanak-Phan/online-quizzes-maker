@@ -20,14 +20,15 @@ interface QuizDocument {
 }
 
 /* ===============================
-   POST - Duplicate a Quiz
+   POST - Duplicate Quiz (Next.js 16)
 ================================ */
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ quizId: string }> }
+) {
   try {
-    // Extract quizId from URL
-    const url = new URL(request.url);
-    const pathSegments = url.pathname.split("/");
-    const quizId = pathSegments[pathSegments.length - 2];
+    // ✅ REQUIRED in Next.js 16
+    const { quizId } = await context.params;
 
     if (!quizId) {
       return NextResponse.json(
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Remove _id safely (TypeScript-safe)
+    // Remove _id safely
     const { _id, ...quizWithoutId } = originalQuiz;
 
     // Create duplicated quiz
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     // Insert duplicated quiz
     const result = await quizzesCollection.insertOne(newQuiz);
 
-    // Response payload
+    // Response
     const createdQuiz = {
       ...newQuiz,
       _id: result.insertedId.toString(),
