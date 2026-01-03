@@ -1,4 +1,3 @@
-// app/api/teacher/quizzes/[quizId]/results/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 // Mock data
@@ -13,19 +12,18 @@ const mockResults = [
     submittedAt: new Date().toISOString(),
     answers: [],
   },
-  // Add more mock results as needed
 ];
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { quizId: string } }
+  context: { params: { quizId: string } } // must be plain object, not a promise
 ) {
   try {
-    const quizId = params.quizId;
-    
-    // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+    const { quizId } = context.params;
+
+    // simulate delay
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
     return NextResponse.json({
       quizId,
       quizTitle: `Quiz ${quizId.substring(0, 8)}...`,
@@ -33,7 +31,7 @@ export async function GET(
       total: mockResults.length,
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error fetching results:", error);
     return NextResponse.json(
       { error: "Failed to fetch results" },
       { status: 500 }
