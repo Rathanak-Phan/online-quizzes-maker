@@ -18,8 +18,9 @@ interface QuizDocument {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ Extract quizId safely from URL
     const parts = request.nextUrl.pathname.split("/");
-    const quizId = parts[parts.length - 2]; // extract quizId from URL
+    const quizId = parts[parts.length - 2];
 
     if (!quizId || !ObjectId.isValid(quizId)) {
       return NextResponse.json({ error: "Invalid quiz ID" }, { status: 400 });
@@ -30,9 +31,13 @@ export async function POST(request: NextRequest) {
     const quizzesCollection = db.collection<QuizDocument>("quizzes");
 
     const originalQuiz = await quizzesCollection.findOne({ _id: new ObjectId(quizId) });
-    if (!originalQuiz) return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    if (!originalQuiz) {
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    }
 
+    // Remove _id to insert as a new document
     const { _id, ...quizWithoutId } = originalQuiz;
+
     const newQuiz: QuizDocument = {
       ...quizWithoutId,
       title: `${originalQuiz.title} (Copy)`,
@@ -50,9 +55,9 @@ export async function POST(request: NextRequest) {
       quiz: {
         ...newQuiz,
         _id: result.insertedId.toString(),
-        teacherId: newQuiz.teacherId?.toString(),
-        questions: newQuiz.questions?.length || 0,
-        assignedClasses: newQuiz.assignedClassIds?.length || 0,
+        teacherId: newQuiz.teacherId?.toString() || null,
+        questions: newQuiz.questions || [],
+        assignedClasses: newQuiz.assignedClassIds || [],
         avgScore: null,
       },
       message: "Quiz duplicated successfully",
