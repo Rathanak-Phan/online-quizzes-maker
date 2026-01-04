@@ -1,15 +1,16 @@
 // app/admin/page.tsx
-import clientPromise, { dbName } from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb';
 import Link from 'next/link';
 
-// Force dynamic rendering to avoid prerender errors
+// Force dynamic rendering (no build-time DB fetch)
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Fetch stats at runtime only
 async function getStats() {
   try {
-    const client = await clientPromise;
-    const db = client.db(dbName);
+    const client = await clientPromise; // Connects to MongoDB at request-time
+    const db = client.db('online-quizzes'); // Keep your original DB name
 
     const totalUsers = await db.collection('users').countDocuments();
     const totalTeachers = await db.collection('users').countDocuments({ role: 'teacher' });
@@ -22,13 +23,13 @@ async function getStats() {
     return { totalUsers, totalTeachers, pendingTeachers, totalQuizzes };
   } catch (error) {
     console.error('MongoDB fetch failed:', error);
-    // Fallback values
+    // Return defaults to prevent crashing
     return { totalUsers: 0, totalTeachers: 0, pendingTeachers: 0, totalQuizzes: 0 };
   }
 }
 
 export default async function AdminDashboard() {
-  const stats = await getStats();
+  const stats = await getStats(); // Only runs at request-time
 
   return (
     <div className="space-y-8">
