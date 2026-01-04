@@ -1,6 +1,10 @@
 // app/admin/page.tsx
 import clientPromise from '@/lib/mongodb';
-import Link from "next/link"; // ← Added this
+import Link from "next/link";
+
+// ✅ ADD THESE TWO LINES (VERY IMPORTANT)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 async function getStats() {
   const client = await clientPromise;
@@ -8,7 +12,10 @@ async function getStats() {
 
   const totalUsers = await db.collection('users').countDocuments();
   const totalTeachers = await db.collection('users').countDocuments({ role: 'teacher' });
-  const pendingTeachers = await db.collection('users').countDocuments({ role: 'teacher', isValidated: false });
+  const pendingTeachers = await db.collection('users').countDocuments({
+    role: 'teacher',
+    isValidated: false
+  });
   const totalQuizzes = await db.collection('quizzes').countDocuments();
 
   return { totalUsers, totalTeachers, pendingTeachers, totalQuizzes };
@@ -20,8 +27,12 @@ export default async function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-4xl font-bold text-gray-900">Welcome back, Admin!</h1>
-        <p className="text-gray-600 mt-2 text-lg">Here's what's happening in your platform today.</p>
+        <h1 className="text-4xl font-bold text-gray-900">
+          Welcome back, Admin!
+        </h1>
+        <p className="text-gray-600 mt-2 text-lg">
+          Here's what's happening in your platform today.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -29,14 +40,17 @@ export default async function AdminDashboard() {
           <h3 className="text-lg font-medium opacity-90">Total Users</h3>
           <p className="text-5xl font-bold mt-4">{stats.totalUsers}</p>
         </div>
+
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
           <h3 className="text-lg font-medium opacity-90">Teachers</h3>
           <p className="text-5xl font-bold mt-4">{stats.totalTeachers}</p>
         </div>
+
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
           <h3 className="text-lg font-medium opacity-90">Pending Approval</h3>
           <p className="text-5xl font-bold mt-4">{stats.pendingTeachers}</p>
         </div>
+
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
           <h3 className="text-lg font-medium opacity-90">Total Quizzes</h3>
           <p className="text-5xl font-bold mt-4">{stats.totalQuizzes}</p>
