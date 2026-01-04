@@ -1,31 +1,31 @@
 // types/next-auth.d.ts
 
-import NextAuth from 'next-auth';
+import NextAuth, { DefaultSession } from "next-auth";
 
-declare module 'next-auth' {
+export type UserRole = "admin" | "teacher" | "user";
+
+declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      role: 'admin' | 'teacher' | 'user';
+      role: UserRole;
       isValidated: boolean;
       adSkipping: boolean;
-    };
+    } & DefaultSession["user"];
   }
 
   interface User {
     id: string;
-    role: 'admin' | 'teacher' | 'user';
+    role: UserRole;
     isValidated: boolean;
     adSkipping: boolean;
   }
 }
 
-declare module 'next-auth/jwt' {
+declare module "next-auth/jwt" {
   interface JWT {
-    role: 'admin' | 'teacher' | 'user';
+    id: string;
+    role: UserRole;
     isValidated: boolean;
     adSkipping: boolean;
   }

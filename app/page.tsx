@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Header from "@/app/components/ui/header";
-import HomePage from "./components/ui/home";
+import HomePage from "./(student)/home";
 
 interface User {
   id: number;
@@ -17,18 +17,13 @@ export default function RootHomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  // Optional: Check if API is reachable (you can remove this if you don't need it)
-  useEffect(() => {
-    fetch("/api")
-      .then((res) => res.json())
-      .then((data) => setMessage(data.message || "API OK"))
-      .catch(() => setMessage("⚠️ API unreachable"));
-  }, []);
+ 
 
   // Load logged-in user
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
       if (!token) {
         setUser(null);
         setLoadingUser(false);
@@ -58,7 +53,8 @@ export default function RootHomePage() {
 
     // Listen for login/logout events
     const updateUser = async () => {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
       if (!token) {
         setUser(null);
         return;
