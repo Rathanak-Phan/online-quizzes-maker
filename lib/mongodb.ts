@@ -1,23 +1,25 @@
-// lib/mongodb.ts - Updated for MongoDB Atlas
+// lib/mongodb.ts
 import { MongoClient } from 'mongodb';
 
 const uri = process.env.MONGODB_URI!;
+const dbName = process.env.MONGODB_DB_NAME || 'online-quizzes';
 
 if (!uri) {
-  throw new Error('Please define MONGODB_URI in .env.local');
+  throw new Error('Please define MONGODB_URI in environment variables');
 }
 
-// MongoDB Atlas options (simplified - remove TLS issues)
+// MongoDB options (Atlas-friendly)
 const options = {
-  // For MongoDB Atlas, these options usually work better
   connectTimeoutMS: 10000,
   socketTimeoutMS: 45000,
   serverSelectionTimeoutMS: 10000,
   maxPoolSize: 10,
+  ssl: true, // ensures TLS
 };
 
-// Type declaration for global
+// Global variable to prevent multiple connections in dev
 declare global {
+  // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
@@ -25,16 +27,16 @@ let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so the client is preserved
   if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
     global._mongoClientPromise = client.connect();
   }
   clientPromise = global._mongoClientPromise;
 } else {
-  // In production mode, don't use a global variable
+  // Production: connect per request (serverless-friendly)
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }
 
 export default clientPromise;
+export { dbName };
