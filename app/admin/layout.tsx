@@ -1,3 +1,4 @@
+// app/admin/layout.tsx
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -5,7 +6,11 @@ import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminClientLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
@@ -29,22 +34,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="text-xl text-gray-600 animate-pulse">Loading Admin Panel...</div>
+        <div className="text-xl text-gray-600 animate-pulse">
+          Loading Admin Panel...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
       <Sidebar currentPath={pathname} />
-
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="p-8 overflow-y-auto">
-          {children}
-        </main>
+        <main className="p-8 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
