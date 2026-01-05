@@ -13,17 +13,8 @@ interface User {
 }
 
 export default function RootHomePage() {
-  const [message, setMessage] = useState("loading...");
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-
-  // Optional: Check if API is reachable (you can remove this if you don't need it)
-  useEffect(() => {
-    fetch("/api")
-      .then((res) => res.json())
-      .then((data) => setMessage(data.message || "API OK"))
-      .catch(() => setMessage("⚠️ API unreachable"));
-  }, []);
 
   // Load logged-in user
   useEffect(() => {
