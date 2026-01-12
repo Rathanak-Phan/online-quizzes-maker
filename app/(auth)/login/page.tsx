@@ -56,8 +56,7 @@ export default function Login() {
 
       // FORCE REDIRECT — this works 100%
       const role = data.user.role;
-      let redirectPath = "/";
-
+      let redirectPath = "/student";
       if (role === "admin") redirectPath = "/admin";
       else if (role === "teacher") redirectPath = "/teacher";
 
