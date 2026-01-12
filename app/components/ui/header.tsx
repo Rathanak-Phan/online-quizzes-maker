@@ -74,14 +74,11 @@ export default function Header() {
           <Link href="/" className="hover:text-blue-600">
             Home
           </Link>
-          <Link href="/quizzes" className="hover:text-blue-600">
-            Quizzes
+          <Link href="/teacher" className="hover:text-blue-600">
+            Teacher
           </Link>
-          <Link href="/categories" className="hover:text-blue-600">
-            Categories
-          </Link>
-          <Link href="/leaderboard" className="hover:text-blue-600">
-            Leaderboard
+          <Link href="/student" className="hover:text-blue-600">
+            Student
           </Link>
         </nav>
 

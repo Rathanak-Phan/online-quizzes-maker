@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import TeacherHeader from "./components/Header";
+import Header from "../components/ui/header";
 import TeacherSidebar from "./components/Sidebar";
 
 export default function TeacherLayout({
@@ -44,11 +44,10 @@ export default function TeacherLayout({
 
       {/* Main Content - Auto resizes based on sidebar width */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarCollapsed ? "ml-20" : "ml-64" // Adjust left margin
-        } lg:ml-0`} // On large screens, no margin needed because sidebar is static
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${sidebarCollapsed ? "ml-20" : "ml-64" // Adjust left margin
+          } lg:ml-0`} // On large screens, no margin needed because sidebar is static
       >
-        <TeacherHeader />
+        <Header />
         <main className="flex-1 p-6 lg:p-10 overflow-y-auto">{children}</main>
       </div>
     </div>

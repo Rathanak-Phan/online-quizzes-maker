@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Header from "@/app/components/ui/header";
+import Header from "./components/ui/header";
 import HomePage from "./components/ui/home";
 
 interface User {
