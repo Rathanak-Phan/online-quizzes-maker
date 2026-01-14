@@ -30,28 +30,33 @@ const mockClasses = [
     name: "Mathematics 101",
     code: "MATH101",
     type: "public" as const,
-    description: "Introduction to basic mathematics concepts",
-    students: 25,
-    inviteLink: "http://localhost:3000/join/MATH101",
-    createdAt: "2024-01-15T10:30:00Z",
-    subject: "Mathematics",
-    schedule: "Mon/Wed 10:00 AM",
     teacherId: "teacher-123",
+    students: [],
+    quizzes: [],
+    inviteLink: "http://localhost:3000/join/MATH101",
   },
   {
     _id: "65b2c3d4e5f6789012345678",
     name: "Physics: Intro",
     code: "PHYS101",
     type: "private" as const,
-    description: "Fundamentals of physics",
-    students: 18,
-    inviteLink: "http://localhost:3000/join/PHYS101",
-    createdAt: "2024-02-01T14:00:00Z",
-    subject: "Physics",
-    schedule: "Tue/Thu 2:00 PM",
     teacherId: "teacher-123",
+    students: [],
+    quizzes: [],
+    inviteLink: "http://localhost:3000/join/PHYS101",
+  },
+  {
+    _id: "65c3d4e5f67890123456789a",
+    name: "History Basics",
+    code: "HIST101",
+    type: "public" as const,
+    teacherId: "teacher-123",
+    students: [],
+    quizzes: [],
+    inviteLink: "http://localhost:3000/join/HIST101",
   },
 ];
+
 
 export async function GET(request: NextRequest) {
   try {
@@ -150,7 +155,7 @@ export async function POST(request: NextRequest) {
     const client = await clientPromise;
 
     const teacherDb = client.db("teacher");
-    const quizzesDb = client.db("online-quizzes");
+    const quizzesDb = client.db("norak");
 
     const teacherClasses = teacherDb.collection("classes");
     const quizzesClasses = quizzesDb.collection("classes");
@@ -168,7 +173,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 📦 Base class data
+    //  Base class data
     const baseClass = {
       name,
       code: normalizedCode,
@@ -184,12 +189,12 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     };
 
-    // 🧠 Insert separately (do NOT reuse same object reference)
+    //  Insert separately (do NOT reuse same object reference)
     const teacherInsert = await teacherClasses.insertOne({ ...baseClass });
     try {
       await quizzesClasses.insertOne({ ...baseClass });
     } catch (err) {
-      // 🔁 Rollback teacher DB insert if quizzes DB fails
+      //  Rollback teacher DB insert if quizzes DB fails
       await teacherClasses.deleteOne({ _id: teacherInsert.insertedId });
       throw err;
     }
