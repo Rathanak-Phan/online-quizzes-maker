@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     // Try to connect to MongoDB
     try {
       const client = await clientPromise;
-      const db = client.db("teacher");
+      const db = client.db("student");
       const classesCollection = db.collection("classes");
 
       // Get teacher ID (for now use mock)
@@ -145,23 +145,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Try to save to MongoDB
     try {
       const client = await clientPromise;
+      const db = client.db("student");
+      const classesCollection = db.collection("classes");
 
-      // ✅ Connect to both databases
-      const teacherDb = client.db("teacher");
-      const quizzesDb = client.db("online-quizzes");
+      // Check if code already exists
+      const existingClass = await classesCollection.findOne({
+        code: code.toUpperCase(),
+      });
 
-      const teacherClasses = teacherDb.collection("classes");
-      const quizzesClasses = quizzesDb.collection("classes");
-
-      // Check if code already exists in either DB
-      const existingTeacherClass = await teacherClasses.findOne({ code: code.toUpperCase() });
-      const existingQuizClass = await quizzesClasses.findOne({ code: code.toUpperCase() });
-
-      if (existingTeacherClass || existingQuizClass) {
+      if (existingClass) {
         return NextResponse.json(
-          { success: false, error: "Class code already exists in one of the databases" },
+          { success: false, error: "Class code already exists" },
           { status: 409 }
         );
       }
@@ -181,19 +178,16 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       };
 
-      // ✅ Insert into both DBs
-      const teacherResult = await teacherClasses.insertOne(newClass);
-      const quizzesResult = await quizzesClasses.insertOne(newClass);
+      const result = await classesCollection.insertOne(newClass);
 
-      console.log("Saved to teacher DB:", teacherResult.insertedId);
-      console.log("Saved to online-quizzes DB:", quizzesResult.insertedId);
+      console.log("Class saved to MongoDB:", result.insertedId);
 
       return NextResponse.json(
         {
           success: true,
-          message: "Class created successfully in both databases",
+          message: "Class created successfully in MongoDB",
           class: {
-            _id: teacherResult.insertedId.toString(),
+            _id: result.insertedId.toString(),
             name: newClass.name,
             code: newClass.code,
             type: newClass.type,
@@ -207,10 +201,10 @@ export async function POST(request: NextRequest) {
         { status: 201 }
       );
     } catch (dbError) {
-      console.error("MongoDB save error:", dbError);
+      console.log("MongoDB save error, using mock:", dbError);
     }
 
-    // Fallback mock response
+    // Mock response if MongoDB fails
     const newClass = {
       _id: Date.now().toString(),
       name,
@@ -243,4 +237,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
