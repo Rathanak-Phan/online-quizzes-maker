@@ -15,16 +15,13 @@ function formatClassResponse(classData: any) {
     name: classData.name,
     code: classData.code,
     type: classData.type,
-    description: classData.description || "",
-    subject: classData.subject || "",
-    schedule: classData.schedule || "",
     teacherId: classData.teacherId?.toString() || classData.teacherId,
     students: classData.students || [],
+    quizzes: classData.quizzes || [],
     inviteLink: classData.inviteLink || generateInviteLink(classData.code),
-    createdAt: classData.createdAt || new Date(),
-    updatedAt: classData.updatedAt || new Date(),
   };
 }
+
 
 // Mock data for fallback
 const mockClasses = [
@@ -58,22 +55,20 @@ const mockClasses = [
 
 export async function GET(request: NextRequest) {
   try {
-    // Try to connect to MongoDB
     try {
       const client = await clientPromise;
       const db = client.db("teacher");
       const classesCollection = db.collection("classes");
 
-      // Get teacher ID (for now use mock)
+      // Mock teacher ID for now
       const teacherId = new ObjectId("65a1b2c3d4e5f67890123456");
 
       // Fetch classes from MongoDB
       const classes = await classesCollection
         .find({ teacherId })
-        .sort({ createdAt: -1 })
+        .sort({ _id: -1 }) // sort by newest
         .toArray();
 
-      console.log(classesCollection);
       console.log(`Found ${classes.length} classes in MongoDB`);
 
       // Format response
@@ -81,7 +76,8 @@ export async function GET(request: NextRequest) {
         const formatted = formatClassResponse(cls);
         return {
           ...formatted,
-          students: cls.students ? cls.students.length : 0,
+          studentCount: cls.students ? cls.students.length : 0,
+          quizCount: cls.quizzes ? cls.quizzes.length : 0,
         };
       });
 
@@ -95,7 +91,7 @@ export async function GET(request: NextRequest) {
       console.log("MongoDB error, using mock data:", dbError);
     }
 
-    // Use mock data if MongoDB fails
+    // Fallback: mock data
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get("search") || "";
     const type = searchParams.get("type") || "all";
@@ -145,102 +141,89 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    try {
-      const client = await clientPromise;
+    const normalizedCode = code.toUpperCase();
+    const now = new Date();
 
-      // ✅ Connect to both databases
-      const teacherDb = client.db("teacher");
-      const quizzesDb = client.db("online-quizzes");
+    // Mock teacher ID (replace with auth later)
+    const teacherId = new ObjectId("65a1b2c3d4e5f67890123456");
 
-      const teacherClasses = teacherDb.collection("classes");
-      const quizzesClasses = quizzesDb.collection("classes");
+    const client = await clientPromise;
 
-      // Check if code already exists in either DB
-      const existingTeacherClass = await teacherClasses.findOne({ code: code.toUpperCase() });
-      const existingQuizClass = await quizzesClasses.findOne({ code: code.toUpperCase() });
+    const teacherDb = client.db("teacher");
+    const quizzesDb = client.db("online-quizzes");
 
-      if (existingTeacherClass || existingQuizClass) {
-        return NextResponse.json(
-          { success: false, error: "Class code already exists in one of the databases" },
-          { status: 409 }
-        );
-      }
+    const teacherClasses = teacherDb.collection("classes");
+    const quizzesClasses = quizzesDb.collection("classes");
 
-      const now = new Date();
-      const newClass = {
-        name,
-        code: code.toUpperCase(),
-        type: type || "public",
-        description: description || "",
-        subject: subject || "",
-        schedule: schedule || "",
-        teacherId: new ObjectId("65a1b2c3d4e5f67890123456"), // Mock teacher ID
-        students: [],
-        inviteLink: generateInviteLink(code.toUpperCase()),
-        createdAt: now,
-        updatedAt: now,
-      };
+    // 🔍 Check for duplicate class code (case-insensitive)
+    const exists = await Promise.all([
+      teacherClasses.findOne({ code: normalizedCode }),
+      quizzesClasses.findOne({ code: normalizedCode }),
+    ]);
 
-      // ✅ Insert into both DBs
-      const teacherResult = await teacherClasses.insertOne(newClass);
-      const quizzesResult = await quizzesClasses.insertOne(newClass);
-
-      console.log("Saved to teacher DB:", teacherResult.insertedId);
-      console.log("Saved to online-quizzes DB:", quizzesResult.insertedId);
-
+    if (exists[0] || exists[1]) {
       return NextResponse.json(
-        {
-          success: true,
-          message: "Class created successfully in both databases",
-          class: {
-            _id: teacherResult.insertedId.toString(),
-            name: newClass.name,
-            code: newClass.code,
-            type: newClass.type,
-            students: 0,
-            inviteLink: newClass.inviteLink,
-            subject: newClass.subject,
-            schedule: newClass.schedule,
-            createdAt: newClass.createdAt,
-          },
-        },
-        { status: 201 }
+        { success: false, error: "Class code already exists" },
+        { status: 409 }
       );
-    } catch (dbError) {
-      console.error("MongoDB save error:", dbError);
     }
 
-    // Fallback mock response
-    const newClass = {
-      _id: Date.now().toString(),
+    // 📦 Base class data
+    const baseClass = {
       name,
-      code: code.toUpperCase(),
+      code: normalizedCode,
       type: type || "public",
       description: description || "",
-      students: 0,
-      inviteLink: generateInviteLink(code.toUpperCase()),
-      createdAt: new Date().toISOString(),
       subject: subject || "",
       schedule: schedule || "",
-      teacherId: "teacher-123",
+      teacherId,
+      students: [],
+      quizzes: [],
+      inviteLink: generateInviteLink(normalizedCode),
+      createdAt: now,
+      updatedAt: now,
     };
 
-    mockClasses.push(newClass);
+    // 🧠 Insert separately (do NOT reuse same object reference)
+    const teacherInsert = await teacherClasses.insertOne({ ...baseClass });
+    try {
+      await quizzesClasses.insertOne({ ...baseClass });
+    } catch (err) {
+      // 🔁 Rollback teacher DB insert if quizzes DB fails
+      await teacherClasses.deleteOne({ _id: teacherInsert.insertedId });
+      throw err;
+    }
 
     return NextResponse.json(
       {
         success: true,
-        message: "Class created successfully (mock)",
-        class: newClass,
+        message: "Class created successfully",
+        class: {
+          _id: teacherInsert.insertedId.toString(),
+          name: baseClass.name,
+          code: baseClass.code,
+          type: baseClass.type,
+          studentCount: 0,
+          quizCount: 0,
+          inviteLink: baseClass.inviteLink,
+          subject: baseClass.subject,
+          schedule: baseClass.schedule,
+          createdAt: baseClass.createdAt,
+        },
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error creating class:", error);
+
     return NextResponse.json(
-      { success: false, error: "Failed to create class" },
+      {
+        success: false,
+        error: "Failed to create class",
+      },
       { status: 500 }
     );
   }
 }
+
 

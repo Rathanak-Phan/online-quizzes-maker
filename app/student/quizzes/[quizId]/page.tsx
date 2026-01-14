@@ -7,11 +7,11 @@ import { Clock, ChevronLeft, ChevronRight, CheckCircle, AlertCircle } from "luci
 
 type Question = {
   id: string;
-  text: string;
-  type: string;
+  type: "singleSelect" | "multiSelect" | "trueFalse" | "fillBlank";
+  question: string;
   options?: string[];
   points?: number;
-  correctAnswer?: string | number | boolean;
+  answer: string | number | boolean | number[];
   explanation?: string;
   hint?: string;
 };
@@ -37,7 +37,7 @@ export default function TakeQuizPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string | number | boolean>>({});
+  const [answers, setAnswers] = useState<Record<string, string | number | boolean | number[]>>({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -95,28 +95,61 @@ export default function TakeQuizPage() {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  const setAnswer = (qid: string, value: string | number | boolean) => {
+  const setAnswer = (qid: string, value: string | number | boolean | number[]) => {
     setAnswers((prev) => ({ ...prev, [qid]: value }));
   };
+
 
   const handleSubmit = () => {
     if (!quiz) return;
     const total = questions.length;
     let score = 0;
+
     questions.forEach((q) => {
       const ans = answers[q.id];
-      const correct = q.correctAnswer;
+      const correct = q.answer;
+
       if (correct === undefined) return;
-      if (typeof correct === "boolean" && typeof ans === "boolean" && ans === correct) score += q.points || 1;
-      else if (typeof correct === "number" && typeof ans === "number" && ans === correct) score += q.points || 1;
-      else if (typeof correct === "string" && typeof ans === "string" && ans.trim() === correct.trim())
-        score += q.points || 1;
+
+      switch (q.type) {
+        case "trueFalse":
+          if (typeof ans === "boolean" && ans === correct) {
+            score += q.points || 1;
+          }
+          break;
+
+        case "singleSelect":
+          if (typeof ans === "number" && ans === correct) {
+            score += q.points || 1;
+          }
+          break;
+
+        case "multiSelect":
+          if (Array.isArray(correct) && Array.isArray(ans)) {
+            // Check if arrays match (ignoring order)
+            const sortedAns = [...ans].sort();
+            const sortedCorrect = [...correct].sort();
+            if (JSON.stringify(sortedAns) === JSON.stringify(sortedCorrect)) {
+              score += q.points || 1;
+            }
+          }
+          break;
+
+        case "fillBlank":
+          if (typeof ans === "string" && typeof correct === "string" && ans.trim().toLowerCase() === correct.trim().toLowerCase()) {
+            score += q.points || 1;
+          }
+          break;
+      }
     });
+
     const maxPoints = questions.reduce((sum, q) => sum + (q.points || 1), 0);
     const percentage = maxPoints > 0 ? Math.round((score / maxPoints) * 100) : 0;
+
     setSubmitted(true);
     setResult({ score, total, percentage });
   };
+
 
   if (loading) {
     return (
@@ -146,159 +179,172 @@ export default function TakeQuizPage() {
     return null;
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 w-full pt-24">
-      <div className="max-w-5xl mx-auto px-6 pb-12">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{quiz.title}</h1>
-            <p className="text-gray-600 mt-1">{quiz.description || "No description"}</p>
-            <p className="text-sm text-gray-500 mt-1">Category: {quiz.category || "General"}</p>
-          </div>
-          <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <Clock className="w-5 h-5 text-gray-700" />
-            <span className="font-mono text-gray-900">{formatTime(remainingSeconds)}</span>
+  if (submitted && result) {
+    return (
+      <div className="min-h-screen bg-gray-50 w-full pt-24">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto" />
+            <h2 className="text-2xl font-bold mt-4">Quiz Submitted!</h2>
+            <p className="text-gray-600 mt-2">
+              You scored {result.score} out of {result.total}.
+            </p>
+            <div className="text-4xl font-bold mt-4">{result.percentage}%</div>
+            <Link href="/student/quizzes">
+              <span className="mt-6 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg">
+                Back to Quizzes
+              </span>
+            </Link>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {!submitted ? (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-sm text-gray-600">
-                  Question {currentIndex + 1} of {questions.length}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
-                    onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                    disabled={currentIndex === 0}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
-                    onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-                    disabled={currentIndex >= questions.length - 1}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">{current?.text || "Untitled question"}</h2>
-                {current?.hint && <p className="mt-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg">{current.hint}</p>}
-              </div>
-
-              {current?.type?.toLowerCase().includes("true") ? (
-                <div className="space-y-3">
-                  {[true, false].map((val) => (
-                    <label key={String(val)} className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name={`q-${current.id}`}
-                        checked={answers[current.id] === val}
-                        onChange={() => setAnswer(current.id, val)}
-                      />
-                      <span className="text-gray-900">{val ? "True" : "False"}</span>
-                    </label>
-                  ))}
-                </div>
-              ) : current?.type?.toLowerCase().includes("short") ? (
-                <textarea
-                  className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  rows={4}
-                  value={(answers[current.id] as string) || ""}
-                  onChange={(e) => setAnswer(current.id, e.target.value)}
-                  placeholder="Type your answer..."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {(current?.options || []).map((opt, idx) => (
-                    <label key={idx} className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name={`q-${current.id}`}
-                        checked={answers[current.id] === idx || answers[current.id] === opt}
-                        onChange={() => setAnswer(current.id, typeof current.correctAnswer === "number" ? idx : opt)}
-                      />
-                      <span className="text-gray-900">{opt}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              {current?.explanation && (
-                <div className="mt-4 flex items-start gap-2 bg-amber-50 text-amber-800 px-3 py-2 rounded-lg">
-                  <AlertCircle className="w-4 h-4 mt-0.5" />
-                  <p className="text-sm">{current.explanation}</p>
-                </div>
-              )}
-
-              <div className="mt-6 flex items-center justify-between">
-                <Link href="/student/quizzes" className="text-gray-700 hover:underline">
-                  Exit
-                </Link>
-                <div className="flex items-center gap-2">
-                  <button
-                    className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-                    onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-                    disabled={currentIndex === 0}
-                  >
-                    Previous
-                  </button>
-                  {currentIndex < questions.length - 1 ? (
-                    <button
-                      className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-                      onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))}
-                    >
-                      Next
-                    </button>
-                  ) : (
-                    <button
-                      className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                      onClick={handleSubmit}
-                    >
-                      Submit
-                    </button>
-                  )}
-                </div>
-              </div>
+  return (
+    <div className="min-h-screen bg-gray-50 w-full pt-24">
+      <div className="max-w-4xl mx-auto px-6">
+        <div className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-xl font-bold">{quiz.title}</h1>
+            <div className="flex items-center gap-2 text-red-500">
+              <Clock className="w-5 h-5" />
+              <span className="font-semibold">{formatTime(remainingSeconds)}</span>
             </div>
           </div>
-        ) : (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-2 text-green-700">
-              <CheckCircle className="w-5 h-5" />
-              <h2 className="text-lg font-semibold">Quiz submitted</h2>
-            </div>
-            <p className="mt-2 text-gray-700">
-              Score: {result?.score} / {questions.reduce((sum, q) => sum + (q.points || 1), 0)} (
-              {result?.percentage}%)
+
+          <div className="mb-4">
+            <p className="text-sm text-gray-500">
+              Question {currentIndex + 1} of {questions.length}
             </p>
-            <div className="mt-6 flex gap-3">
-              <Link
-                href="/student/quizzes"
-                className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
-              >
-                Back to quizzes
-              </Link>
-              <button
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                onClick={() => {
-                  setSubmitted(false);
-                  setResult(null);
-                  setAnswers({});
-                  setCurrentIndex(0);
-                  setRemainingSeconds(quiz.timeLimit * 60);
-                }}
-              >
-                Retry
-              </button>
+            <div className="bg-gray-200 h-1.5 rounded-full mt-1">
+              <div
+                className="bg-blue-600 h-1.5 rounded-full"
+                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+              ></div>
             </div>
           </div>
-        )}
+
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {current?.question || "Untitled question"}
+            </h2>
+            {current?.hint && (
+              <p className="mt-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg">
+                {current.hint}
+              </p>
+            )}
+          </div>
+
+          {current?.type === "trueFalse" ? (
+            <div className="space-y-3">
+              {[true, false].map((val) => (
+                <label
+                  key={String(val)}
+                  className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50"
+                >
+                  <input
+                    type="radio"
+                    name={`q-${current.id}`}
+                    checked={answers[current.id] === val}
+                    onChange={() => setAnswer(current.id, val)}
+                  />
+                  <span className="text-gray-900">{val ? "True" : "False"}</span>
+                </label>
+              ))}
+            </div>
+          ) : current?.type === "fillBlank" ? (
+            <textarea
+              className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200"
+              rows={4}
+              value={(answers[current.id] as string) || ""}
+              onChange={(e) => setAnswer(current.id, e.target.value)}
+              placeholder="Type your answer..."
+            />
+          ) : current?.type === "multiSelect" ? (
+            <div className="space-y-3">
+              {(current?.options || []).map((opt, idx) => {
+                const selected = Array.isArray(answers[current.id])
+                  ? (answers[current.id] as number[]).includes(idx)
+                  : false;
+                return (
+                  <label
+                    key={idx}
+                    className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => {
+                        const prev = Array.isArray(answers[current.id])
+                          ? (answers[current.id] as number[])
+                          : [];
+                        if (selected) {
+                          setAnswer(current.id, prev.filter((i) => i !== idx));
+                        } else {
+                          setAnswer(current.id, [...prev, idx]);
+                        }
+                      }}
+                    />
+                    <span className="text-gray-900">{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            // singleSelect
+            <div className="space-y-3">
+              {(current?.options || []).map((opt, idx) => (
+                <label
+                  key={idx}
+                  className="flex items-center gap-3 p-3 border rounded-xl hover:bg-gray-50"
+                >
+                  <input
+                    type="radio"
+                    name={`q-${current.id}`}
+                    checked={answers[current.id] === idx}
+                    onChange={() => setAnswer(current.id, idx)}
+                  />
+                  <span className="text-gray-900">{opt}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {current?.explanation && submitted && (
+            <div className="mt-4 flex items-start gap-2 bg-amber-50 text-amber-800 px-3 py-2 rounded-lg">
+              <AlertCircle className="w-4 h-4 mt-0.5" />
+              <p className="text-sm">{current.explanation}</p>
+            </div>
+          )}
+          
+          <div className="mt-6 flex justify-between">
+            <button
+              onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+              disabled={currentIndex === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Previous
+            </button>
+            {currentIndex < questions.length - 1 ? (
+              <button
+                onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg"
+              >
+                Submit
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
