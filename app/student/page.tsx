@@ -16,6 +16,11 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [classes, setClasses] = useState<
+    { _id: string; name: string; code: string; students: number; type?: string }[]
+  >([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+  const [classesError, setClassesError] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
@@ -27,6 +32,34 @@ export default function StudentDashboard() {
     setUser(parsed);
     setLoading(false);
   }, [router]);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        setLoadingClasses(true);
+        setClassesError(null);
+        const res = await fetch("/api/student/classes");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Error: ${res.status}`);
+        }
+        const data = await res.json();
+        const list = (data.classes || []).map((c: any) => ({
+          _id: c._id,
+          name: c.name,
+          code: c.code,
+          students: typeof c.students === "number" ? c.students : (c.students || []).length,
+          type: c.type,
+        }));
+        setClasses(list);
+      } catch (err: any) {
+        setClassesError(err.message || "Failed to load classes");
+      } finally {
+        setLoadingClasses(false);
+      }
+    };
+    loadClasses();
+  }, []);
 
 
   const statCards = [
@@ -157,13 +190,74 @@ export default function StudentDashboard() {
                 <h2 className="text-xl font-semibold text-gray-900">Your Classes</h2>
               </div>
               <div className="px-6 py-6">
-                <p className="text-gray-600 mb-4">No classes yet.</p>
-                <Link
-                  href="/student/classes"
-                  className="inline-block px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
-                >
-                  Add Class
-                </Link>
+                {loadingClasses ? (
+                  <p className="text-gray-600">Loading classes...</p>
+                ) : classesError ? (
+                  <p className="text-red-600">{classesError}</p>
+                ) : classes.length === 0 ? (
+                  <div>
+                    <p className="text-gray-600 mb-4">No classes yet.</p>
+                    <Link
+                      href="/student/classes"
+                      className="inline-block px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                    >
+                      Add Class
+                    </Link>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                      {classes.slice(0, 6).map((cls) => (
+                        <div
+                          key={cls._id}
+                          className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
+                        >
+                          <div className="p-5">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h3 className="text-lg font-bold text-gray-900">
+                                  {cls.name}
+                                </h3>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="text-gray-600">Code:</span>
+                                  <span className="px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-xs font-semibold">
+                                    {cls.code}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-sm text-gray-600">
+                                  {cls.students} Students
+                                </p>
+                              </div>
+                            </div>
+                            <div className="mt-5 flex items-center justify-between">
+                              <Link
+                                href={`/student/classes/${cls._id}`}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+                              >
+                                View
+                              </Link>
+                              <span
+                                className={`px-3 py-1 rounded-xl text-xs ${
+                                  cls.type === "public"
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-amber-50 text-amber-700"
+                                }`}
+                              >
+                                {cls.type || "public"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <Link
+                      href="/student/classes"
+                      className="inline-block px-5 py-3 rounded-xl bg-gray-100 text-gray-800 font-semibold hover:bg-gray-200"
+                    >
+                      View all classes
+                    </Link>
+                  </div>
+                )}
               </div>
             </section>
           </div>
