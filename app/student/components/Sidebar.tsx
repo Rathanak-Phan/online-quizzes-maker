@@ -3,22 +3,23 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LayoutDashboard, School, FileText } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 type ActiveItem = "dashboard" | "classes" | "quizzes";
 
 export default function StudentSidebar() {
   const [activeItem, setActiveItem] = useState<ActiveItem>("dashboard");
+  const pathname = usePathname();
 
   useEffect(() => {
-    const setFromHash = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (hash === "classes") setActiveItem("classes");
-      else if (hash === "dashboard") setActiveItem("dashboard");
-    };
-    setFromHash();
-    window.addEventListener("hashchange", setFromHash);
-    return () => window.removeEventListener("hashchange", setFromHash);
-  }, []);
+    if (pathname.startsWith("/student/quizzes")) {
+      setActiveItem("quizzes");
+    } else if (pathname.startsWith("/student/classes")) {
+      setActiveItem("classes");
+    } else if (pathname.startsWith("/student")) {
+      setActiveItem("dashboard");
+    }
+  }, [pathname]);
 
   return (
     <div className="fixed left-0 top-18 overflow-hidden border border-gray-800 shadow-lg h-[90vh] max-w-[20rem]">
@@ -28,7 +29,7 @@ export default function StudentSidebar() {
         </div>
         <nav className="px-3 pb-3 flex-1 overflow-y-auto">
           <Link
-            href="#dashboard"
+            href="/student"
             onClick={() => setActiveItem("dashboard")}
             className={`group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 ${
               activeItem === "dashboard"
@@ -53,7 +54,7 @@ export default function StudentSidebar() {
           </Link>
 
           <Link
-            href="#classes"
+            href="/student/classes"
             onClick={() => setActiveItem("classes")}
             className={`group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 ${
               activeItem === "classes"
@@ -78,7 +79,7 @@ export default function StudentSidebar() {
           </Link>
 
           <Link
-            href="/quizzes"
+            href="/student/quizzes"
             onClick={() => setActiveItem("quizzes")}
             className={`group relative flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 ${
               activeItem === "quizzes"
@@ -103,4 +104,3 @@ export default function StudentSidebar() {
     </div>
   );
 }
-

@@ -10,7 +10,7 @@ function generateInviteLink(code: string): string {
 
 // GET single class
 export async function GET(request: NextRequest, context: { params: any }) {
-  const classId = context.params.classId;
+  const { classId } = await context.params;
   console.log("[GET] classId:", classId);
 
   if (!ObjectId.isValid(classId)) {

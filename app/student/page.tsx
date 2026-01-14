@@ -59,12 +59,12 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-7xl mx-auto px-6 pt-28 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="md:col-span-3">
+    <div className="min-h-screen bg-gray-50 w-full flex justify-center mb-4">
+      <main className="pt-28 w-full pl-3 pr-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 ">
+          <div className="md:col-span-4 ">
 
-            <section id="dashboard">
+            <section className="mb-10">
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
@@ -75,7 +75,7 @@ export default function StudentDashboard() {
                   </p>
                 </div>
                 <Link
-                  href="/quizzes"
+                  href="/student/quizzes"
                   className="px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
                 >
                   Start a Quiz
@@ -99,9 +99,9 @@ export default function StudentDashboard() {
           <div className="lg:col-span-2 rounded-2xl bg-white shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
-              <Link href="/leaderboard" className="text-blue-600 hover:underline">
+              <p className="text-blue-600 hover:underline">
                 View Leaderboard
-              </Link>
+              </p>
             </div>
             <ul className="divide-y divide-gray-100">
               {recent.map((item) => (
@@ -149,24 +149,7 @@ export default function StudentDashboard() {
           </div>
         </section>
 
-        <section className="mt-10 rounded-2xl bg-white shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900">Badges</h2>
-          </div>
-          <div className="px-6 py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-            {["Fast Learner", "Math Whiz", "Science Star", "History Buff", "Coder", "Explorer"].map(
-              (b) => (
-                <div
-                  key={b}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 border border-gray-200"
-                >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600" />
-                  <span className="text-sm text-gray-700">{b}</span>
-                </div>
-              )
-            )}
-          </div>
-        </section>
+
             </section>
 
             <section id="classes" className="mt-10 rounded-2xl bg-white shadow-sm border border-gray-200">
@@ -176,10 +159,10 @@ export default function StudentDashboard() {
               <div className="px-6 py-6">
                 <p className="text-gray-600 mb-4">No classes yet.</p>
                 <Link
-                  href="/quizzes"
+                  href="/student/classes"
                   className="inline-block px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
                 >
-                  Find a Quiz
+                  Add Class
                 </Link>
               </div>
             </section>
