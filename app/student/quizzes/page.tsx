@@ -258,7 +258,7 @@ export default function StudentQuizzesPage() {
                   </p>
                   <div className="mt-5 flex items-center justify-between">
                     <Link
-                      href="#"
+                      href={`/student/quizzes/${quiz._id}`}
                       className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
                     >
                       Start Quiz
