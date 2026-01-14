@@ -3,60 +3,40 @@ import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
-// Helper functions directly in the file
+// Helper: Generate Invite Link
 function generateInviteLink(code: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return `${baseUrl}/join/${code}`;
 }
 
+// Helper: Format Database Response to JSON
+// This ensures _id and teacherId are strings in the API response
 function formatClassResponse(classData: any) {
   return {
     _id: classData._id?.toString(),
     name: classData.name,
     code: classData.code,
-    type: classData.type,
-    teacherId: classData.teacherId?.toString() || classData.teacherId,
+    type: classData.type || "public",
+    teacherId: classData.teacherId?.toString(), // Convert ObjectId to string
     students: classData.students || [],
     quizzes: classData.quizzes || [],
     inviteLink: classData.inviteLink || generateInviteLink(classData.code),
   };
 }
 
-
-// Mock data for fallback
+// Mock data updated to match the requested structure
 const mockClasses = [
   {
     _id: "65a1b2c3d4e5f67890123456",
     name: "Mathematics 101",
     code: "MATH101",
-    type: "public" as const,
-    teacherId: "teacher-123",
+    type: "public",
+    teacherId: "65a1b2c3d4e5f67890123456",
     students: [],
     quizzes: [],
     inviteLink: "http://localhost:3000/join/MATH101",
   },
-  {
-    _id: "65b2c3d4e5f6789012345678",
-    name: "Physics: Intro",
-    code: "PHYS101",
-    type: "private" as const,
-    teacherId: "teacher-123",
-    students: [],
-    quizzes: [],
-    inviteLink: "http://localhost:3000/join/PHYS101",
-  },
-  {
-    _id: "65c3d4e5f67890123456789a",
-    name: "History Basics",
-    code: "HIST101",
-    type: "public" as const,
-    teacherId: "teacher-123",
-    students: [],
-    quizzes: [],
-    inviteLink: "http://localhost:3000/join/HIST101",
-  },
 ];
-
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,26 +45,17 @@ export async function GET(request: NextRequest) {
       const db = client.db("teacher");
       const classesCollection = db.collection("classes");
 
-      // Mock teacher ID for now
+      // Mock teacher ID (as per your example)
       const teacherId = new ObjectId("65a1b2c3d4e5f67890123456");
 
       // Fetch classes from MongoDB
       const classes = await classesCollection
         .find({ teacherId })
-        .sort({ _id: -1 }) // sort by newest
+        .sort({ _id: -1 })
         .toArray();
 
-      console.log(`Found ${classes.length} classes in MongoDB`);
-
-      // Format response
-      const formattedClasses = classes.map((cls) => {
-        const formatted = formatClassResponse(cls);
-        return {
-          ...formatted,
-          studentCount: cls.students ? cls.students.length : 0,
-          quizCount: cls.quizzes ? cls.quizzes.length : 0,
-        };
-      });
+      // Format response to match the structure provided
+      const formattedClasses = classes.map(formatClassResponse);
 
       return NextResponse.json({
         success: true,
@@ -96,11 +67,10 @@ export async function GET(request: NextRequest) {
       console.log("MongoDB error, using mock data:", dbError);
     }
 
-    // Fallback: mock data
+    // Fallback: mock data logic
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get("search") || "";
-    const type = searchParams.get("type") || "all";
-
+    
     let filteredClasses = mockClasses;
 
     if (search) {
@@ -109,10 +79,6 @@ export async function GET(request: NextRequest) {
           cls.name.toLowerCase().includes(search.toLowerCase()) ||
           cls.code.toLowerCase().includes(search.toLowerCase())
       );
-    }
-
-    if (type !== "all") {
-      filteredClasses = filteredClasses.filter((cls) => cls.type === type);
     }
 
     return NextResponse.json({
@@ -137,8 +103,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, code, type, subject, schedule, description } = body;
+    const { name, code, type } = body;
 
+    // Validation
     if (!name || !code) {
       return NextResponse.json(
         { success: false, error: "Name and code are required" },
@@ -147,20 +114,18 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedCode = code.toUpperCase();
-    const now = new Date();
-
-    // Mock teacher ID (replace with auth later)
+    
+    // Mock teacher ID (Hardcoded as per request)
     const teacherId = new ObjectId("65a1b2c3d4e5f67890123456");
 
     const client = await clientPromise;
-
     const teacherDb = client.db("teacher");
     const quizzesDb = client.db("norak");
 
     const teacherClasses = teacherDb.collection("classes");
     const quizzesClasses = quizzesDb.collection("classes");
 
-    // 🔍 Check for duplicate class code (case-insensitive)
+    // Check for duplicate class code
     const exists = await Promise.all([
       teacherClasses.findOne({ code: normalizedCode }),
       quizzesClasses.findOne({ code: normalizedCode }),
@@ -173,28 +138,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    //  Base class data
-    const baseClass = {
-      name,
+    // Construct the object strictly according to the requested structure
+    const newClassData = {
+      name: name,
       code: normalizedCode,
       type: type || "public",
-      description: description || "",
-      subject: subject || "",
-      schedule: schedule || "",
-      teacherId,
-      students: [],
-      quizzes: [],
+      teacherId: teacherId, // Stored as ObjectId
+      students: [],         // Explicit empty array
+      quizzes: [],          // Explicit empty array
       inviteLink: generateInviteLink(normalizedCode),
-      createdAt: now,
-      updatedAt: now,
     };
 
-    //  Insert separately (do NOT reuse same object reference)
-    const teacherInsert = await teacherClasses.insertOne({ ...baseClass });
+    // Insert into Teacher DB
+    const teacherInsert = await teacherClasses.insertOne({ ...newClassData });
+
+    // Insert into Quizzes DB (Dual write)
     try {
-      await quizzesClasses.insertOne({ ...baseClass });
+      await quizzesClasses.insertOne({ ...newClassData });
     } catch (err) {
-      //  Rollback teacher DB insert if quizzes DB fails
+      // Rollback teacher DB insert if quizzes DB fails
       await teacherClasses.deleteOne({ _id: teacherInsert.insertedId });
       throw err;
     }
@@ -203,24 +165,15 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: "Class created successfully",
-        class: {
-          _id: teacherInsert.insertedId.toString(),
-          name: baseClass.name,
-          code: baseClass.code,
-          type: baseClass.type,
-          studentCount: 0,
-          quizCount: 0,
-          inviteLink: baseClass.inviteLink,
-          subject: baseClass.subject,
-          schedule: baseClass.schedule,
-          createdAt: baseClass.createdAt,
-        },
+        class: formatClassResponse({
+            _id: teacherInsert.insertedId,
+            ...newClassData
+        }),
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error creating class:", error);
-
     return NextResponse.json(
       {
         success: false,
@@ -230,5 +183,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-

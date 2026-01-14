@@ -7,11 +7,14 @@ import Link from "next/link";
 
 export default function NewClassPage() {
   const router = useRouter();
+  
+  // State matches the API expectation: name, code, type
   const [formData, setFormData] = useState({
     name: "",
     code: "",
     type: "public" as "public" | "private",
   });
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -49,37 +52,41 @@ export default function NewClassPage() {
     setLoading(true);
 
     try {
-      console.log("Submitting form data:", formData);
+      // 1. Prepare exact payload for API
+      const payload = {
+        name: formData.name.trim(),
+        code: formData.code.toUpperCase(),
+        type: formData.type,
+      };
+
+      console.log("Submitting payload:", payload);
 
       const res = await fetch("/api/teacher/classes", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formData,
-          code: formData.code.toUpperCase(), // Ensure uppercase
-        }),
+        body: JSON.stringify(payload),
       });
 
+      // 2. Parse JSON regardless of status code to get server error messages
       const data = await res.json();
       console.log("API Response:", data);
 
-      if (!res.ok) {
-        throw new Error(data.message || `Failed to create class: ${res.status} ${res.statusText}`);
-      }
-
+      // 3. Check for logical failure (success: false)
+      // Note: Your API uses 'error' key for failure messages, 'message' for success
       if (!data.success) {
-        throw new Error(data.message || "Failed to create class");
+        throw new Error(data.error || "Failed to create class");
       }
 
       // Success - redirect to classes page
-      console.log("Class created successfully, redirecting...");
+      console.log("Class created successfully:", data.class);
       router.push("/teacher/classes");
       router.refresh();
 
     } catch (err) {
       console.error("Error creating class:", err);
+      // Display the specific error from the API (e.g. "Class code already exists")
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -128,6 +135,7 @@ export default function NewClassPage() {
             )}
 
             <div className="space-y-6">
+              {/* Name Field */}
               <div>
                 <label className="block text-lg font-semibold text-gray-900 mb-3">
                   Class Name
@@ -157,6 +165,7 @@ export default function NewClassPage() {
                 </p>
               </div>
 
+              {/* Code Field */}
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <label className="block text-lg font-semibold text-gray-900">
@@ -198,6 +207,7 @@ export default function NewClassPage() {
                 </p>
               </div>
 
+              {/* Type Field */}
               <div>
                 <label className="block text-lg font-semibold text-gray-900 mb-3">
                   Class Type

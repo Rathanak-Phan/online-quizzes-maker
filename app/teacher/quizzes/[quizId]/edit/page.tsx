@@ -18,12 +18,12 @@ import {
 } from "lucide-react";
 
 interface Question {
-  id: string;
-  text: string;
-  type: "multiple" | "truefalse" | "shortanswer";
-  options: string[];
-  correctAnswer: string | number;
-  points: number;
+  type: "singleSelect" | "multiSelect" | "trueFalse" | "fillBlank";
+  question: string;
+  options?: string[];
+  answer?: number | boolean | string;
+  answers?: number[];
+  hint?: string;
   explanation?: string;
 }
 
@@ -32,22 +32,22 @@ interface Quiz {
   title: string;
   description: string;
   category: string;
-  timeLimit: number;
   status: string;
-  isTemplate: boolean;
+  timeLimit: number;
   questions: Question[];
 }
+
 
 export default function EditQuizPage() {
   const router = useRouter();
   const params = useParams();
   const quizId = params.quizId as string;
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     title: "",
@@ -55,8 +55,8 @@ export default function EditQuizPage() {
     category: "Mathematics",
     timeLimit: 30,
     status: "draft",
-    isTemplate: false,
   });
+
 
   const [questions, setQuestions] = useState<Question[]>([]);
 
@@ -82,27 +82,50 @@ export default function EditQuizPage() {
       try {
         setLoading(true);
         const response = await fetch(`/api/teacher/quizzes/${quizId}`);
-        
+
         if (!response.ok) {
           throw new Error("Failed to fetch quiz");
         }
 
         const result = await response.json();
-        
+
         if (!result.success) {
           throw new Error(result.error || "Quiz not found");
         }
 
-        setQuiz(result.quiz);
+        const q = result.quiz;
+        setQuiz(q);
         setFormData({
-          title: result.quiz.title,
-          description: result.quiz.description || "",
-          category: result.quiz.category,
-          timeLimit: result.quiz.timeLimit,
-          status: result.quiz.status,
-          isTemplate: result.quiz.isTemplate || false,
+          title: q.title,
+          description: q.description || "",
+          category: q.category,
+          timeLimit: q.timeLimit,
+          status: q.status,
         });
-        setQuestions(result.quiz.questions || []);
+        const normalized: Question[] = Array.isArray(q.questions)
+          ? q.questions.map((it: any) => ({
+              type: (it.type as Question["type"]) || "singleSelect",
+              question: typeof it.question === "string" ? it.question : it.text || "",
+              options: Array.isArray(it.options)
+                ? it.options.map((o: any) => (typeof o === "string" ? o : o?.text ?? String(o)))
+                : undefined,
+              answer:
+                it.answer !== undefined
+                  ? it.answer
+                  : Array.isArray(it.answers)
+                  ? undefined
+                  : it.correctAnswer,
+              answers: Array.isArray(it.answers)
+                ? it.answers
+                : Array.isArray(it.correctAnswers)
+                ? it.correctAnswers
+                : undefined,
+              hint: it.hint,
+              explanation: it.explanation,
+            }))
+          : [];
+        setQuestions(normalized);
+
       } catch (err: any) {
         console.error("Error fetching quiz:", err);
         setError(err.message || "Failed to load quiz");
@@ -117,7 +140,7 @@ export default function EditQuizPage() {
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
@@ -129,45 +152,53 @@ export default function EditQuizPage() {
   // Handle question changes
   const handleQuestionChange = (index: number, field: keyof Question, value: any) => {
     const updatedQuestions = [...questions];
-    
+
     if (field === "type") {
-      // Reset options when changing type
-      if (value === "multiple") {
+      const t = value as Question["type"];
+      if (t === "singleSelect") {
         updatedQuestions[index].options = ["", "", "", ""];
-        updatedQuestions[index].correctAnswer = 0;
-      } else if (value === "truefalse") {
+        updatedQuestions[index].answer = 0;
+        updatedQuestions[index].answers = undefined;
+      } else if (t === "multiSelect") {
+        updatedQuestions[index].options = ["", "", "", ""];
+        updatedQuestions[index].answers = [];
+        updatedQuestions[index].answer = undefined;
+      } else if (t === "trueFalse") {
         updatedQuestions[index].options = ["True", "False"];
-        updatedQuestions[index].correctAnswer = 0;
-      } else if (value === "shortanswer") {
+        updatedQuestions[index].answer = false;
+        updatedQuestions[index].answers = undefined;
+      } else if (t === "fillBlank") {
         updatedQuestions[index].options = [];
-        updatedQuestions[index].correctAnswer = "";
+        updatedQuestions[index].answer = "";
+        updatedQuestions[index].answers = undefined;
       }
     }
-    
+
     updatedQuestions[index] = {
       ...updatedQuestions[index],
       [field]: value,
     };
-    
+
     setQuestions(updatedQuestions);
   };
 
   // Handle option changes for multiple choice
   const handleOptionChange = (questionIndex: number, optionIndex: number, value: string) => {
     const updatedQuestions = [...questions];
-    updatedQuestions[questionIndex].options[optionIndex] = value;
+    const opts = updatedQuestions[questionIndex].options || [];
+    opts[optionIndex] = value;
+    updatedQuestions[questionIndex].options = opts;
     setQuestions(updatedQuestions);
   };
 
   // Add new question
   const addQuestion = () => {
     const newQuestion: Question = {
-      id: Date.now().toString(),
-      text: "",
-      type: "multiple",
+      type: "singleSelect",
+      question: "",
       options: ["", "", "", ""],
-      correctAnswer: 0,
-      points: 10,
+      answer: 0,
+      hint: "",
       explanation: "",
     };
     setQuestions([...questions, newQuestion]);
@@ -198,17 +229,36 @@ export default function EditQuizPage() {
     // Validate questions
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      
-      if (!q.text.trim()) {
+
+      if (!q.question?.trim()) {
         setError(`Question ${i + 1} text is required`);
         return false;
       }
 
-      if (q.type === "multiple") {
-        const hasEmptyOptions = q.options.some(opt => !opt.trim());
-        if (hasEmptyOptions) {
+      if (q.type === "singleSelect" || q.type === "multiSelect" || q.type === "trueFalse") {
+        const opts = q.options || [];
+        const hasEmptyOptions = opts.some(opt => !opt?.trim());
+        if ((q.type === "singleSelect" || q.type === "multiSelect") && hasEmptyOptions) {
           setError(`Question ${i + 1} has empty options`);
           return false;
+        }
+        if (q.type === "singleSelect") {
+          if (typeof q.answer !== "number") {
+            setError(`Question ${i + 1} must have a selected correct option`);
+            return false;
+          }
+        }
+        if (q.type === "multiSelect") {
+          if (!Array.isArray(q.answers) || q.answers.length === 0) {
+            setError(`Question ${i + 1} must have at least one correct option`);
+            return false;
+          }
+        }
+        if (q.type === "trueFalse") {
+          if (typeof q.answer !== "boolean") {
+            setError(`Question ${i + 1} must set True or False as answer`);
+            return false;
+          }
         }
       }
     }
@@ -229,12 +279,14 @@ export default function EditQuizPage() {
       setSaving(true);
 
       const updateData = {
-        ...formData,
-        questions: questions.map(q => ({
-          ...q,
-          id: undefined, // Remove id as MongoDB will handle it
-        })),
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        status: formData.status,
+        timeLimit: formData.timeLimit,
+        questions,
       };
+
 
       const response = await fetch(`/api/teacher/quizzes/${quizId}`, {
         method: "PUT",
@@ -244,6 +296,7 @@ export default function EditQuizPage() {
         body: JSON.stringify(updateData),
       });
 
+
       const result = await response.json();
 
       if (!response.ok) {
@@ -252,10 +305,10 @@ export default function EditQuizPage() {
 
       // Show success message
       alert("Quiz updated successfully!");
-      
+
       // Redirect back to quizzes page
       router.push("/teacher/quizzes");
-      
+
     } catch (err: any) {
       console.error("Error updating quiz:", err);
       setError(err.message || "Failed to update quiz");
@@ -281,7 +334,7 @@ export default function EditQuizPage() {
 
       // Redirect to quizzes page
       router.push("/teacher/quizzes");
-      
+
     } catch (err: any) {
       console.error("Error deleting quiz:", err);
       setError(err.message || "Failed to delete quiz");
@@ -298,7 +351,7 @@ export default function EditQuizPage() {
 
   if (error && !quiz) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pt-20">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Quiz</h2>

@@ -119,7 +119,74 @@ export default function QuizzesPage() {
         data: data, // Log full data for debugging
       });
 
-      setQuizzes(data.quizzes || []);
+      const list = (data.quizzes || []).map((q: any) => ({
+        _id: q._id,
+        title: q.title || "",
+        description: q.description || "",
+        category: q.category || "General",
+        status: q.status || "draft",
+        timeLimit: q.timeLimit || 30,
+        isTemplate: Boolean(q.isTemplate),
+        lastUsed: q.lastUsed || q.createdAt,
+        createdAt: q.createdAt,
+        updatedAt: q.updatedAt || q.createdAt,
+        teacherId: q.teacherId || "unknown",
+        assignedClasses: q.assignedClasses || 0,
+        avgScore: q.avgScore ?? null,
+        questions: Array.isArray(q.questions) ? q.questions : [],
+        questionsCount: Array.isArray(q.questions) ? q.questions.length : Number(q.questions) || 0,
+      }));
+
+      const details = await Promise.all(
+        list.map(async (q: any) => {
+          try {
+            const r = await fetch(`/api/teacher/quizzes/${q._id}`);
+            const jd = await r.json();
+            if (!r.ok || jd.success === false) return null;
+            return jd.quiz;
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const normalizeType = (t: string) => {
+        const s = (t || "").toLowerCase();
+        if (s.includes("multi")) return "multiple-choice";
+        if (s.includes("single")) return "multiple-choice";
+        if (s.includes("true")) return "true-false";
+        if (s.includes("fill") || s.includes("short")) return "short-answer";
+        return "multiple-choice";
+      };
+
+      const normalized = list.map((q: any, i: number) => {
+        const dq = details[i];
+        const qs = Array.isArray(dq?.questions) ? dq.questions : q.questions;
+        const questions = Array.isArray(qs)
+          ? qs.map((item: any, idx: number) => ({
+              _id: item._id?.toString?.() ?? item.id ?? String(idx),
+              text: typeof item.text === "string" ? item.text : item.question ?? "",
+              type: normalizeType(item.type || item.kind),
+              points: typeof item.points === "number" ? item.points : 1,
+              options: Array.isArray(item.options)
+                ? item.options.map((opt: any) => (typeof opt === "string" ? opt : opt?.text ?? String(opt)))
+                : undefined,
+              correctAnswer:
+                item.correctAnswer !== undefined
+                  ? item.correctAnswer
+                  : Array.isArray(item.answers)
+                  ? item.answers[0]
+                  : item.answer,
+              explanation: item.explanation,
+            }))
+          : [];
+        return {
+          ...q,
+          questions,
+        } as Quiz;
+      });
+
+      setQuizzes(normalized);
 
       // Extract categories
       const uniqueCategories = Array.from(

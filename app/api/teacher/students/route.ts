@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get("sort") || "name";
 
     const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB_NAME || 'online-quizzes-maker');
+    const db = client.db("student");
 
     // Build query
     const query: any = { role: "student" };
