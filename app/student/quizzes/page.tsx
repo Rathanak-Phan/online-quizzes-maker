@@ -12,7 +12,7 @@ interface QuizItem {
   title: string;
   description?: string;
   category: string;
-  questions: number;
+  questions?: number;
   assignedClasses: number;
   avgScore: number | null;
   status: QuizStatus;
@@ -32,6 +32,12 @@ export default function StudentQuizzesPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | QuizStatus>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sort, setSort] = useState<"newest" | "title" | "lastUsed">("newest");
+  const [addCode, setAddCode] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [addSuccess, setAddSuccess] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
@@ -61,8 +67,10 @@ export default function StudentQuizzesPage() {
       }
       const data = await res.json();
       setQuizzes(data.quizzes || []);
-    } catch (err: any) {
-      setError(err.message || "Failed to load quizzes");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : typeof err === "string" ? err : "Failed to load quizzes";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -142,7 +150,7 @@ export default function StudentQuizzesPage() {
             <div className="relative">
               <select
                 value={sort}
-                onChange={(e) => setSort(e.target.value as any)}
+                onChange={(e) => setSort(e.target.value as "newest" | "title" | "lastUsed")}
                 className="py-3 px-3 bg-white rounded-2xl border border-gray-200 text-gray-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100"
               >
                 <option value="newest">Newest</option>
@@ -156,6 +164,55 @@ export default function StudentQuizzesPage() {
             >
               Search
             </button>
+            <div className="relative ml-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={addCode}
+                  onChange={(e) => setAddCode(e.target.value)}
+                  placeholder="Enter quiz code or ID"
+                  className="w-56 py-3 px-3 bg-white rounded-2xl border border-gray-200 text-gray-900 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-100"
+                />
+                <button
+                  className="px-4 py-3 bg-emerald-600 text-white rounded-2xl shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+                  onClick={async () => {
+                    setAddError(null);
+                    setAddSuccess(null);
+                    const code = addCode.trim();
+                    if (!code) {
+                      setAddError("Please enter a quiz code");
+                      return;
+                    }
+                    try {
+                      setAdding(true);
+                      const res = await fetch("/api/student/quiz/addbycode", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ code }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || data.success === false) {
+                        throw new Error(data.error || "Failed to add quiz");
+                      }
+                      setAddSuccess("Quiz added");
+                      setAddCode("");
+                      await fetchQuizzes();
+                    } catch (e: unknown) {
+                      const msg =
+                        e instanceof Error ? e.message : typeof e === "string" ? e : "Failed to add quiz";
+                      setAddError(msg);
+                    } finally {
+                      setAdding(false);
+                    }
+                  }}
+                  disabled={adding}
+                >
+                  {adding ? "Adding..." : "Add Quiz"}
+                </button>
+              </div>
+              {addError && <p className="text-sm text-red-600 mt-2">{addError}</p>}
+              {addSuccess && <p className="text-sm text-green-700 mt-2">{addSuccess}</p>}
+            </div>
           </div>
         </div>
 
@@ -183,10 +240,12 @@ export default function StudentQuizzesPage() {
                           <Tag className="w-3.5 h-3.5" />
                           {quiz.category}
                         </span>
-                        <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold flex items-center gap-1">
-                          <BookOpen className="w-3.5 h-3.5" />
-                          {quiz.questions} questions
-                        </span>
+                        {typeof quiz.questions === "number" && (
+                          <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-semibold flex items-center gap-1">
+                            <BookOpen className="w-3.5 h-3.5" />
+                            {quiz.questions} questions
+                          </span>
+                        )}
                         <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
                           {quiz.timeLimit} min
@@ -204,6 +263,30 @@ export default function StudentQuizzesPage() {
                     >
                       Start Quiz
                     </Link>
+                    <button
+                      className="px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60"
+                      onClick={async () => {
+                        setRemoveError(null);
+                        setRemovingId(quiz._id);
+                        try {
+                          const res = await fetch(`/api/student/quiz/${quiz._id}`, { method: "DELETE" });
+                          const data = await res.json().catch(() => ({}));
+                          if (!res.ok || data.success === false) {
+                            throw new Error(data.error || "Failed to remove quiz");
+                          }
+                          await fetchQuizzes();
+                        } catch (e: unknown) {
+                          const msg =
+                            e instanceof Error ? e.message : typeof e === "string" ? e : "Failed to remove quiz";
+                          setRemoveError(msg);
+                        } finally {
+                          setRemovingId(null);
+                        }
+                      }}
+                      disabled={removingId === quiz._id}
+                    >
+                      {removingId === quiz._id ? "Removing..." : "Remove"}
+                    </button>
                     <span
                       className={`px-3 py-1 rounded-xl text-xs ${
                         quiz.status === "active"
@@ -216,6 +299,9 @@ export default function StudentQuizzesPage() {
                       {quiz.status}
                     </span>
                   </div>
+                  {removeError && removingId === null && (
+                    <p className="text-sm text-red-600 mt-2">{removeError}</p>
+                  )}
                 </div>
               </div>
             ))}

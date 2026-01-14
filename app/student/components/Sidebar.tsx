@@ -73,9 +73,7 @@ export default function StudentSidebar() {
             <div className="flex-1 min-w-0">
               <span className="font-medium truncate">Classes</span>
             </div>
-            <span className="text-xs px-1.5 py-0.5 rounded-full min-w-6 text-center bg-blue-500/20 text-blue-300">
-              12
-            </span>
+
           </Link>
 
           <Link
