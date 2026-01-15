@@ -32,6 +32,15 @@ export default function ClassDetailsPage() {
   const [quizzes, setQuizzes] = useState<ClassQuiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState("");
+  const [showAssign, setShowAssign] = useState(false);
+  const [quizOptions, setQuizOptions] = useState<{ id: string; title: string }[]>([]);
+  const [selectedQuizId, setSelectedQuizId] = useState("");
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignMsg, setAssignMsg] = useState("");
 
   // 2. FIX: Use useEffect to actually trigger the fetch
   useEffect(() => {
@@ -40,7 +49,7 @@ export default function ClassDetailsPage() {
     }
   }, [params.classId]);
 
-  const fetchClassDetails = async () => {
+const fetchClassDetails = async () => {
     try {
       setLoading(true);
       const classId = params.classId;
@@ -53,17 +62,104 @@ export default function ClassDetailsPage() {
         throw new Error(`Error: ${res.status}`);
       }
 
-      const data = await res.json();
-      console.log("API Response:", data);
+      const responseJson = await res.json();
+      console.log("API Response:", responseJson);
 
-      // 3. FIX: Update state instead of local variables
-      setStudents(data.students || []);
-      setQuizzes(data.quizzes || []);
+      // FIX: Access .data because your API wraps the result in { success: true, data: ... }
+      const classData = responseJson.data || {}; 
+
+      setStudents(classData.students || []);
+      setQuizzes(classData.quizzes || []);
     } catch (err: any) {
       console.error("Failed to fetch class details:", err);
       setError("Failed to load class data");
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleInviteStudent = async () => {
+    try {
+      setInviteLoading(true);
+      setInviteMsg("");
+      const classId = params.classId;
+      const res = await fetch(`/api/teacher/classes/${classId}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setInviteMsg(data.error || "Failed to invite");
+        return;
+      }
+      const s = data.student;
+      setStudents((prev) => [
+        ...prev,
+        {
+          id: s._id || s.id,
+          name: s.name || "",
+          email: s.email || "",
+          joinedDate: new Date().toISOString(),
+          quizzesTaken: 0,
+          avgScore: null,
+        },
+      ]);
+      setInviteMsg(data.message || "Invited");
+      setInviteEmail("");
+      setShowInvite(false);
+    } catch (e) {
+      setInviteMsg("Server error");
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+  
+  const loadQuizzes = async () => {
+    try {
+      const res = await fetch(`/api/teacher/quizzes`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !data.success) return;
+      const options = (data.quizzes || []).map((q: any) => ({
+        id: q._id || q.id,
+        title: q.title || "Untitled Quiz",
+      }));
+      setQuizOptions(options);
+    } catch {}
+  };
+  
+  const handleAssignQuiz = async () => {
+    try {
+      setAssignLoading(true);
+      setAssignMsg("");
+      const classId = params.classId;
+      const res = await fetch(`/api/teacher/classes/${classId}/addquiz`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId: selectedQuizId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setAssignMsg(data.error || "Failed to assign");
+        return;
+      }
+      const q = data.quiz;
+      setQuizzes((prev) => [
+        ...prev,
+        {
+          id: q.id,
+          title: q.title,
+          status: "active",
+          dueDate: q.dueDate,
+        },
+      ]);
+      setAssignMsg(data.message || "Assigned");
+      setSelectedQuizId("");
+      setShowAssign(false);
+    } catch (e) {
+      setAssignMsg("Server error");
+    } finally {
+      setAssignLoading(false);
     }
   };
 
@@ -117,12 +213,21 @@ export default function ClassDetailsPage() {
           {/* Action Button */}
           <div className="mt-4 md:mt-0">
             {activeTab === "students" ? (
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-sm transition-all">
+              <button
+                onClick={() => setShowInvite((v) => !v)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 shadow-sm transition-all"
+              >
                 <UserPlus className="w-5 h-5" />
                 Invite Students
               </button>
             ) : (
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-all">
+              <button
+                onClick={() => {
+                  setShowAssign((v) => !v);
+                  if (!showAssign) loadQuizzes();
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 shadow-sm transition-all"
+              >
                 <FileText className="w-5 h-5" />
                 Assign Quiz
               </button>
@@ -135,6 +240,25 @@ export default function ClassDetailsPage() {
         {/* 1. STUDENTS TAB */}
         {activeTab === "students" && (
           <div className="animate-in fade-in duration-300">
+            {showInvite && (
+              <div className="mb-4 flex items-center gap-2">
+                <input
+                  type="email"
+                  placeholder="Student email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20"
+                />
+                <button
+                  onClick={handleInviteStudent}
+                  disabled={inviteLoading || !inviteEmail}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  {inviteLoading ? "Inviting..." : "Invite"}
+                </button>
+                {inviteMsg && <span className="text-sm text-gray-600">{inviteMsg}</span>}
+              </div>
+            )}
             <div className="mb-6">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -199,6 +323,30 @@ export default function ClassDetailsPage() {
         {/* 2. QUIZZES TAB */}
         {activeTab === "quizzes" && (
           <div className="animate-in fade-in duration-300">
+            {showAssign && (
+              <div className="mb-4 flex items-center gap-2">
+                <select
+                  value={selectedQuizId}
+                  onChange={(e) => setSelectedQuizId(e.target.value)}
+                  className="w-full max-w-md px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="">Select a quiz</option>
+                  {quizOptions.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.title}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAssignQuiz}
+                  disabled={assignLoading || !selectedQuizId}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {assignLoading ? "Assigning..." : "Add to Class"}
+                </button>
+                {assignMsg && <span className="text-sm text-gray-600">{assignMsg}</span>}
+              </div>
+            )}
             <div className="mb-6">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -224,7 +372,13 @@ export default function ClassDetailsPage() {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No Quizzes Assigned</h3>
                   <p className="text-gray-500 mb-6">You haven't assigned any quizzes to this class yet.</p>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                  <button
+                    onClick={() => {
+                      setShowAssign(true);
+                      loadQuizzes();
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
                     Assign First Quiz
                   </button>
                 </div>

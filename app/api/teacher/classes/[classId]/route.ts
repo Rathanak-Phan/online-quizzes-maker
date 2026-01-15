@@ -8,18 +8,11 @@ function generateInviteLink(code: string): string {
   return `${baseUrl}/join/${code}`;
 }
 
-// GET single class
-export async function GET(request: NextRequest, context: { params: any }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ classId: string }> }
+) {
   const { classId } = await context.params;
-  console.log("[GET] classId:", classId);
-
-  if (!ObjectId.isValid(classId)) {
-    return NextResponse.json(
-      { success: false, error: "Invalid class ID format" },
-      { status: 400 }
-    );
-  }
-
   try {
     const client = await clientPromise;
     const db = client.db("teacher");

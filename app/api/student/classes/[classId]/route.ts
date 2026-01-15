@@ -29,11 +29,20 @@ export async function GET(request: NextRequest, context: { params: any }) {
     }
 
     const students = (classData.students || []).map((student: any) => {
+      const raw = student.grade;
+      let grade: number[] = [];
+      if (Array.isArray(raw)) {
+        grade = raw.map((g: any) => Number(g)).filter((n: number) => Number.isFinite(n));
+      } else if (raw !== undefined && raw !== null) {
+        const n = Number(raw);
+        if (Number.isFinite(n)) grade = [n];
+      }
       return {
         _id: String(student.id || student._id || ""),
         name: String(student.name || ""),
         email: String(student.email || ""),
-        grade: student.grade || [],      };
+        grade: grade,
+      };
     });
 
     // Extract quizzes from the embedded array in the class document
