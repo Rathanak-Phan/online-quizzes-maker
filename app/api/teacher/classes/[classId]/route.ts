@@ -24,12 +24,8 @@ export async function GET(request: NextRequest, context: { params: any }) {
     const client = await clientPromise;
     const db = client.db("teacher");
     const classesCollection = db.collection("classes");
-
-    const teacherId = new ObjectId("65a1b2c3d4e5f67890123456"); // Replace with session ID later
-
     const classData = await classesCollection.findOne({
       _id: new ObjectId(classId),
-      teacherId,
     });
 
     if (!classData) {
@@ -39,13 +35,7 @@ export async function GET(request: NextRequest, context: { params: any }) {
       );
     }
 
-    const responseData = {
-      ...classData,
-      _id: classData._id.toString(),
-      inviteLink: classData.inviteLink || generateInviteLink(classData.code),
-    };
-
-    return NextResponse.json({ success: true, data: responseData });
+    return NextResponse.json({ success: true, data: classData });
   } catch (err) {
     console.error("[GET] MongoDB error:", err);
     return NextResponse.json(
