@@ -42,6 +42,64 @@ export async function POST(
       return NextResponse.json({ success: false, error: "Class not found" }, { status: 404 });
     }
 
+    const classDoc = await teacherDb.collection("classes").findOne({ _id: new ObjectId(classId) });
+    if (classDoc) {
+      const studentDb = client.db("student");
+      const studentClasses = studentDb.collection("classes");
+      const studentQuizzes = studentDb.collection("quizzes");
+
+      const classMirror = {
+        name: classDoc.name || "",
+        code: classDoc.code || "",
+        type: classDoc.type || "public",
+        teacherId:
+          typeof classDoc.teacherId === "string"
+            ? classDoc.teacherId
+            : classDoc.teacherId instanceof ObjectId
+            ? classDoc.teacherId
+            : undefined,
+        students: Array.isArray(classDoc.students) ? classDoc.students : [],
+        quizzes: Array.isArray(classDoc.quizzes) ? classDoc.quizzes : [],
+        inviteLink: classDoc.inviteLink,
+        updatedAt: new Date(),
+      };
+
+      await studentClasses.updateOne(
+        { code: classMirror.code },
+        { $setOnInsert: { createdAt: new Date() }, $set: classMirror },
+        { upsert: true }
+      );
+
+      const quizzesArr: any[] = Array.isArray(classDoc.quizzes) ? classDoc.quizzes : [];
+      const mainDb = client.db("main");
+      const mainQuizzes = mainDb.collection("quizzes");
+      for (const q of quizzesArr) {
+        let source: any = null;
+        if (q?.id && ObjectId.isValid(q.id)) {
+          source = await mainQuizzes.findOne({ _id: new ObjectId(q.id) });
+        }
+        if (!source && q?.title) {
+          source = await mainQuizzes.findOne({ title: q.title });
+        }
+        if (!source) continue;
+        const exists = await studentQuizzes.findOne({
+          $or: [{ sourceQuizId: source._id }, { title: source.title }],
+        });
+        if (exists) continue;
+        await studentQuizzes.insertOne({
+          title: source.title || "Untitled Quiz",
+          description: source.description || "",
+          category: source.category || "General",
+          status: source.status || "draft",
+          timeLimit: source.timeLimit || 30,
+          questions: source.questions || [],
+          sourceQuizId: source._id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       student: { _id: user._id.toString(), name: user.name || "", email: user.email },

@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
     const mainDb = client.db("main");
     const sourceCollection = mainDb.collection("classes");
 
-    const targetDb = client.db("student");
-    const targetCollection = targetDb.collection("classes");
+    const studentDb = client.db("student");
+    const targetCollection = studentDb.collection("classes");
 
     const sourceClass = await sourceCollection.findOne({ code });
     if (!sourceClass) {
@@ -71,6 +71,43 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await targetCollection.insertOne(doc);
+
+    // Also copy quizzes referenced by the class into student quizzes collection
+    try {
+      const quizzesArr: any[] = Array.isArray(doc.quizzes) ? doc.quizzes : [];
+      const studentQuizzes = studentDb.collection("quizzes");
+      const mainQuizzes = mainDb.collection("quizzes");
+
+      for (const q of quizzesArr) {
+        let source: any = null;
+        if (q?.id && ObjectId.isValid(q.id)) {
+          source = await mainQuizzes.findOne({ _id: new ObjectId(q.id) });
+        }
+        if (!source && q?.title) {
+          source = await mainQuizzes.findOne({ title: q.title });
+        }
+        if (!source) continue;
+
+        const exists = await studentQuizzes.findOne({
+          $or: [{ sourceQuizId: source._id }, { title: source.title }],
+        });
+        if (exists) continue;
+
+        await studentQuizzes.insertOne({
+          title: source.title || "Untitled Quiz",
+          description: source.description || "",
+          category: source.category || "General",
+          status: source.status || "draft",
+          timeLimit: source.timeLimit || 30,
+          questions: source.questions || [],
+          sourceQuizId: source._id,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to copy class quizzes to student DB:", e);
+    }
 
     return NextResponse.json(
       {
