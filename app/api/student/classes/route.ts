@@ -70,7 +70,6 @@ export async function GET(request: NextRequest) {
         .sort({ createdAt: -1 })
         .toArray();
 
-      console.log(classesCollection);
       console.log(`Found ${classes.length} classes in MongoDB`);
 
       // Format response

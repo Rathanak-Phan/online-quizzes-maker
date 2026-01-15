@@ -1,4 +1,3 @@
-// app/teacher/classes/page.tsx (improved UX)
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -30,7 +29,7 @@ interface Class {
   name: string;
   code: string;
   type: "public" | "private";
-  students: number;
+  students: any[];
   inviteLink?: string;
   createdAt?: string;
   subject?: string;
@@ -76,6 +75,7 @@ export default function ClassesPage() {
       if (!res.ok) throw new Error("Failed to load classes");
 
       const data = await res.json();
+      console.log("Raw API Data:", data.classes);
       setClasses(data.classes || []);
     } catch (err) {
       setError("Failed to load classes. Please try again.");
@@ -225,7 +225,7 @@ export default function ClassesPage() {
                     Total Students
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {classes.reduce((acc, c) => acc + c.students, 0)}
+                    {classes.reduce((acc, c) => acc + c.students.length, 0)}
                   </p>
                 </div>
               </div>
@@ -371,7 +371,7 @@ export default function ClassesPage() {
                   <div className="flex items-center gap-1">
                     <Users className="w-4 h-4 text-gray-500" />
                     <span>
-                      {cls.students} Student{cls.students !== 1 ? "s" : ""}
+                      {cls.students.length} Student{cls.students.length !== 1 ? "s" : ""}
                     </span>
                   </div>
                   {cls.schedule && (

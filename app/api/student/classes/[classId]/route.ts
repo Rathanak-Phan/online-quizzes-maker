@@ -91,3 +91,40 @@ export async function GET(request: NextRequest, context: { params: any }) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest, context: { params: any }) {
+  const { classId } = await context.params;
+
+  if (!classId || !ObjectId.isValid(classId)) {
+    return NextResponse.json(
+      { success: false, error: "Invalid class ID" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const client = await clientPromise;
+    const dbStudent = client.db("student");
+    const classes = dbStudent.collection("classes");
+
+    const result = await classes.deleteOne({ _id: new ObjectId(classId) });
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: "Class not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Class removed",
+      deletedId: classId,
+    });
+  } catch (error) {
+    console.error("[DELETE /api/student/classes/[classId]] Error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to remove class" },
+      { status: 500 }
+    );
+  }
+}

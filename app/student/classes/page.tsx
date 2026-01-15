@@ -35,6 +35,8 @@ export default function StudentClassesPage() {
   const [addCode, setAddCode] = useState("");
   const [addError, setAddError] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchClasses = async () => {
@@ -97,6 +99,23 @@ export default function StudentClassesPage() {
       setAddError(err.message || "Failed to add class");
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleRemoveClass = async (id: string) => {
+    setRemoveError(null);
+    setRemovingId(id);
+    try {
+      const res = await fetch(`/api/student/classes/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || "Failed to remove class");
+      }
+      await fetchClasses();
+    } catch (err: any) {
+      setRemoveError(err.message || "Failed to remove class");
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -205,8 +224,15 @@ export default function StudentClassesPage() {
                       className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
                     >
                       <Users className="w-5 h-5" />
-                      Manage Students
+                      View Class
                     </Link>
+                    <button
+                      className="px-4 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60"
+                      onClick={() => handleRemoveClass(cls._id)}
+                      disabled={removingId === cls._id}
+                    >
+                      {removingId === cls._id ? "Removing..." : "Remove"}
+                    </button>
                     <a
                       href={cls.inviteLink || "#"}
                       target="_blank"
@@ -225,6 +251,9 @@ export default function StudentClassesPage() {
                       )}
                     </a>
                   </div>
+                  {removeError && removingId === null && (
+                    <p className="text-sm text-red-600 mt-2">{removeError}</p>
+                  )}
                 </div>
               </div>
             ))}
