@@ -29,23 +29,30 @@ export async function GET(request: NextRequest, context: { params: any }) {
     }
 
     // Extract students from the embedded array in the class document
-    const students = (classData.students || []).map((student: any) => ({
-      _id: student.id || student._id || "",
-      name: student.name || "",
-      email: student.email || "",
-      joinedAt: student.joinedAt || new Date(),
-      quizzesAttempted: student.quizzesAttempted || 0,
-      avgScore: student.avgScore || 0,
-      grade: student.grade || "",
-    }));
+    const students = (classData.students || []).map((student: any) => {
+      // Handle both object format with id/name/grade and full student objects
+      return {
+        _id: String(student.id || student._id || ""),
+        name: String(student.name || ""),
+        email: String(student.email || ""),
+        joinedAt: student.joinedAt
+          ? new Date(student.joinedAt).toISOString()
+          : new Date().toISOString(),
+        quizzesAttempted: Number(student.quizzesAttempted) || 0,
+        avgScore: Number(student.avgScore) || 0,
+        grade: String(student.grade || ""),
+      };
+    });
 
     // Extract quizzes from the embedded array in the class document
-    const quizzes = (classData.quizzes || []).map((quiz: any) => ({
-      id: quiz.id || "",
-      title: quiz.title || "",
-      questions: quiz.questions || 0,
-      description: quiz.description || "",
-    }));
+    const quizzes = (classData.quizzes || []).map((quiz: any) => {
+      return {
+        id: String(quiz.id || ""),
+        title: String(quiz.title || ""),
+        questions: Number(quiz.questions) || 0,
+        description: String(quiz.description || ""),
+      };
+    });
 
     // Calculate average score from students
     const avgScore =
@@ -61,14 +68,14 @@ export async function GET(request: NextRequest, context: { params: any }) {
       success: true,
       class: {
         _id: classData._id.toString(),
-        name: classData.name,
-        code: classData.code,
-        type: classData.type,
+        name: classData.name || "",
+        code: classData.code || "",
+        type: classData.type || "public",
         description: classData.description || "",
         studentCount: students.length,
         quizzesCount: quizzes.length,
         avgScore: avgScore,
-        createdAt: classData.createdAt || new Date(),
+        createdAt: classData.createdAt || new Date().toISOString(),
         subject: classData.subject || "",
         schedule: classData.schedule || "",
         teacher: classData.teacher || null,

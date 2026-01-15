@@ -96,9 +96,41 @@ export default function StudentClassDetailPage() {
       }
 
       const data = await res.json();
+      console.log("API Response:", data);
+
       setClassData(data.class || data);
-      setStudents(data.students || []);
-      setQuizzes(data.quizzes || []);
+
+      // Ensure students is properly formatted array
+      const studentList = Array.isArray(data.students)
+        ? data.students.map((s: any) => {
+            // Ensure all fields are primitives, not objects
+            return {
+              _id: String(s._id || s.id || ""),
+              name: String(s.name || ""),
+              email: String(s.email || ""),
+              joinedAt: String(s.joinedAt || new Date().toISOString()),
+              quizzesAttempted: Number(s.quizzesAttempted) || 0,
+              avgScore: Number(s.avgScore) || 0,
+              grade: String(s.grade || ""),
+            };
+          })
+        : [];
+
+      console.log("Processed students:", studentList);
+      setStudents(studentList);
+
+      // Ensure quizzes is properly formatted array
+      const quizzesList = Array.isArray(data.quizzes)
+        ? data.quizzes.map((q: any) => ({
+            id: String(q.id || ""),
+            title: String(q.title || ""),
+            questions: Number(q.questions) || 0,
+            description: String(q.description || ""),
+          }))
+        : [];
+
+      console.log("Processed quizzes:", quizzesList);
+      setQuizzes(quizzesList);
     } catch (err: any) {
       console.error("Failed to fetch class details:", err);
       setError(err.message || "Failed to load class details");
@@ -128,11 +160,19 @@ export default function StudentClassDetailPage() {
     }
   };
 
-  const filteredStudents = students.filter(
-    (student) =>
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = Array.isArray(students)
+    ? students.filter(
+        (student) =>
+          typeof student === "object" &&
+          student !== null &&
+          (String(student.name || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+            String(student.email || "")
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()))
+      )
+    : [];
 
   if (loading) {
     return (
