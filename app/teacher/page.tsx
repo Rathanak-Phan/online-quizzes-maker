@@ -78,7 +78,7 @@ export default function TeacherDashboard() {
       }
 
       const classesData = await classesRes.json();
-      
+
       setStats({
         totalClasses: 12,
         totalStudents: 348,
@@ -179,23 +179,23 @@ export default function TeacherDashboard() {
                 {classes.map((cls) => (
                   <div key={cls._id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                        {/* 4. Use helper to generate initials */}
-                        {getInitials(cls.name)}
-                      </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">{cls.name}</h3>
-                        {/* 5. Use helper to safely count students */}
                         <p className="text-gray-600">{getStudentCount(cls.students)} students</p>
                       </div>
                     </div>
                     <div className="flex justify-between items-center mt-6">
-                      <span className="px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                        {cls.status || "Active"}
+                      <span
+                        className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${cls.type === "private"
+                            ? "bg-amber-100 text-amber-800" // Style if Private
+                            : "bg-green-100 text-green-800" // Style if Public (Default)
+                          }`}>
+                        {cls.type || "public"}
                       </span>
                       <div className="flex gap-2">
-                        <Link href={`/teacher/classes/${cls._id}`} className="text-blue-600 hover:text-blue-800 font-medium">
-                          View →
+                        <Link href={`/teacher/classes/${cls._id}`}
+                          className="flex items-center gap-1 px-3 py-1 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 font-medium">
+                          View
                         </Link>
                         <button
                           onClick={() => deleteClass(cls._id)}

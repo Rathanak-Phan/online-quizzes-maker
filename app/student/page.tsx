@@ -218,12 +218,6 @@ export default function StudentDashboard() {
                                 <h3 className="text-lg font-bold text-gray-900">
                                   {cls.name}
                                 </h3>
-                                <div className="mt-2 flex items-center gap-2">
-                                  <span className="text-gray-600">Code:</span>
-                                  <span className="px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-xs font-semibold">
-                                    {cls.code}
-                                  </span>
-                                </div>
                                 <p className="mt-2 text-sm text-gray-600">
                                   {cls.students} Students
                                 </p>

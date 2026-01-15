@@ -253,9 +253,6 @@ export default function StudentQuizzesPage() {
                       </div>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-gray-600 line-clamp-2">
-                    {quiz.description || "No description"}
-                  </p>
                   <div className="mt-5 flex items-center justify-between">
                     <Link
                       href={`/student/quizzes/${quiz._id}`}

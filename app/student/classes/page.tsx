@@ -199,12 +199,6 @@ export default function StudentClassesPage() {
                       <h3 className="text-xl font-bold text-gray-900">
                         {cls.name}
                       </h3>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-gray-600">Code:</span>
-                        <span className="px-2 py-1 rounded-md bg-gray-100 text-gray-800 text-xs font-semibold">
-                          {cls.code}
-                        </span>
-                      </div>
                       <div className="mt-2 flex items-center gap-2 text-gray-600">
                         <Users className="w-4 h-4" />
                         <span>{cls.students} Students</span>
