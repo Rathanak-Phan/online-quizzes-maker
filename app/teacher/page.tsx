@@ -4,13 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Users, School, FileText, Trophy, Clock, Award, Trash2 } from "lucide-react";
 
-// 1. Updated Interface to match both API data and UI needs
 interface Class {
   _id: string;
   name: string;
   code: string;
   type: "public" | "private";
-  students: any[] | number; // Allow array (real DB) or number (mock)
+  students: any[] | number;
   inviteLink?: string;
   createdAt?: string;
   subject?: string;

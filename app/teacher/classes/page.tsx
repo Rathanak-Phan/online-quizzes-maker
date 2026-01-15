@@ -3,25 +3,17 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
+  Trash2,
   Plus,
   Search,
   Users,
   Globe,
   Lock,
-  Copy,
-  Edit3,
-  Trash2,
-  MoreVertical,
-  Check,
   Calendar,
   BookOpen,
   ChevronRight,
   Sparkles,
   Filter,
-  Loader2,
-  Eye,
-  UserPlus,
-  Settings,
 } from "lucide-react";
 
 interface Class {
@@ -114,15 +106,9 @@ export default function ClassesPage() {
       console.error("[deleteClass] Error:", err);
       alert(
         "Something went wrong while deleting the class: " +
-          (err.message || "Unknown error")
+        (err.message || "Unknown error")
       );
     }
-  };
-
-  const copyInviteLink = (link: string, id: string) => {
-    navigator.clipboard.writeText(link);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const toggleDropdown = (id: string) => {
@@ -304,32 +290,29 @@ export default function ClassesPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveFilter("all")}
-                  className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 flex-1 ${
-                    activeFilter === "all"
-                      ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-sm"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 flex-1 ${activeFilter === "all"
+                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   All Classes
                 </button>
                 <button
                   onClick={() => setActiveFilter("public")}
-                  className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 flex-1 flex items-center justify-center gap-2 ${
-                    activeFilter === "public"
-                      ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-sm"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 flex-1 flex items-center justify-center gap-2 ${activeFilter === "public"
+                    ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   <Globe className="w-4 h-4" />
                   Public
                 </button>
                 <button
                   onClick={() => setActiveFilter("private")}
-                  className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 flex-1 flex items-center justify-center gap-2 ${
-                    activeFilter === "private"
-                      ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 flex-1 flex items-center justify-center gap-2 ${activeFilter === "private"
+                    ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   <Lock className="w-4 h-4" />
                   Private
@@ -345,11 +328,7 @@ export default function ClassesPage() {
           {filtered.map((cls) => (
             <div
               key={cls._id}
-              className="group relative bg-white rounded-2xl border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1"
-              onClick={() =>
-                (window.location.href = `/teacher/classes/${cls._id}`)
-              }
-            >
+              className="group relative bg-white rounded-2xl border border-gray-200 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1">
               {/* Card Header */}
               <div className="p-5 flex flex-col h-full">
                 <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
@@ -382,25 +361,30 @@ export default function ClassesPage() {
                   )}
                 </div>
 
-                {/* Manage Students & Badge */}
                 <div className="flex items-center justify-between mt-auto">
-                  <div
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex-1 justify-center"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.location.href = `/teacher/classes/${cls._id}/students`;
-                    }}
-                  >
-                    <Users className="w-4 h-4" />
-                    <span>Manage Students</span>
+                  <div className="flex items-center gap-2 px-3 py-2 text-white rounded-xl font-semibold transition-colors flex-1 justify-center">
+                      <button  
+                      onClick={() => deleteClass(cls._id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Class">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                   </div>
 
                   <div
-                    className={`ml-3 p-2 rounded-xl ${
-                      cls.type === "public"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors flex-1 justify-center">
+                    <Users className="w-4 h-4" />
+                    <Link
+                      href={`/teacher/classes/${cls._id}`}>
+                      <span>View</span>
+                    </Link>
+                  </div>
+
+                  <div
+                    className={`ml-3 p-2 rounded-xl ${cls.type === "public"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-amber-100 text-amber-700"
+                      }`}
                     title={
                       cls.type === "public" ? "Public Class" : "Private Class"
                     }
@@ -425,92 +409,7 @@ export default function ClassesPage() {
                     className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                     aria-label="More options"
                   >
-                    <MoreVertical className="w-5 h-5 text-gray-500" />
                   </button>
-
-                  {openDropdown === cls._id && (
-                    <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50 overflow-hidden animate-in scale-in origin-top-right">
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            setOpenDropdown(null);
-                            window.location.href = `/teacher/classes/${cls._id}`;
-                          }}
-                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span className="font-medium">View Details</span>
-                        </button>
-
-                        <Link
-                          href={`/teacher/classes/${cls._id}/edit`}
-                          onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                          <span className="font-medium">Edit Class</span>
-                        </Link>
-
-                        {cls.inviteLink && (
-                          <button
-                            onClick={() => {
-                              copyInviteLink(cls.inviteLink!, cls._id);
-                              setOpenDropdown(null);
-                            }}
-                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
-                          >
-                            {copiedId === cls._id ? (
-                              <>
-                                <Check className="w-4 h-4 text-green-600" />
-                                <span className="font-medium text-green-600">
-                                  Copied!
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-4 h-4" />
-                                <span className="font-medium">
-                                  Copy Invite Link
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        )}
-
-                        <Link
-                          href={`/teacher/classes/${cls._id}/settings`}
-                          onClick={() => setOpenDropdown(null)}
-                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 text-gray-700 w-full"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span className="font-medium">More Settings</span>
-                        </Link>
-
-                        {/* Delete Class */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent card click navigation
-                            setOpenDropdown(null);
-
-                            // Confirm before deleting
-                            if (
-                              !confirm(
-                                "Are you sure you want to delete this class?"
-                              )
-                            )
-                              return;
-
-                            // Call delete function
-                            deleteClass(cls._id);
-                          }}
-                          className="flex items-center gap-3 px-4 py-2 hover:bg-red-50 text-red-600 w-full"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span className="font-medium">Delete Class</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -548,17 +447,6 @@ export default function ClassesPage() {
                 </p>
               </div>
             </div>
-
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {searchTerm || activeFilter !== "all"
-                ? "No matching classes"
-                : "Welcome to your classroom"}
-            </h2>
-            <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
-              {searchTerm
-                ? "Try adjusting your search or filters"
-                : "Create your first class to start organizing students and assignments."}
-            </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {(searchTerm || activeFilter !== "all") && (

@@ -1,28 +1,20 @@
-// app/teacher/quizzes/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
+  Trash2,
   Plus,
   Search,
-  Filter,
   FileText,
-  Users,
-  Trophy,
-  MoreVertical,
   Clock,
   Calendar,
   ChevronDown,
   Loader2,
-  Copy,
-  Trash2,
-  Eye,
   BarChart3,
   LayoutTemplate
 } from "lucide-react";
 
-// --- Types & Interfaces ---
 
 interface Question {
   _id: string;
@@ -138,6 +130,13 @@ const QuizCard = ({
           <span>Last used</span>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => onDelete(quiz._id)}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete Quiz"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
           <Link 
             href={`/teacher/quizzes/${quiz._id}`}
             className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"

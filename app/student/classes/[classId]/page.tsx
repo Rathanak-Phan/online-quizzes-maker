@@ -9,9 +9,6 @@ import {
   Lock,
   Award,
   ArrowLeft,
-  Copy,
-  Check,
-  Search,
   Mail,
   Clock,
 } from "lucide-react";
@@ -136,14 +133,6 @@ export default function StudentClassDetailPage() {
       setError(err.message || "Failed to load class details");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const copyClassCode = () => {
-    if (classData?.code) {
-      navigator.clipboard.writeText(classData.code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     }
   };
 
