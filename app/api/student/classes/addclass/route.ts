@@ -22,19 +22,22 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
 
-    const mainDb = client.db("main");
-    const sourceCollection = mainDb.collection("classes");
+    const teacherDb = client.db("teacher");
+    const sourceCollection = teacherDb.collection("classes");
 
     const studentDb = client.db("student");
     const targetCollection = studentDb.collection("classes");
 
     const sourceClass = await sourceCollection.findOne({ code });
+    
     if (!sourceClass) {
       return NextResponse.json(
         { success: false, error: "Class code not found in database" },
         { status: 404 }
       );
     }
+
+    console.log(sourceClass)
 
     const existing = await targetCollection.findOne({ code });
     if (existing) {
@@ -76,15 +79,15 @@ export async function POST(request: NextRequest) {
     try {
       const quizzesArr: any[] = Array.isArray(doc.quizzes) ? doc.quizzes : [];
       const studentQuizzes = studentDb.collection("quizzes");
-      const mainQuizzes = mainDb.collection("quizzes");
+      const classQuizzes = teacherDb.collection("quizzes");
 
       for (const q of quizzesArr) {
         let source: any = null;
         if (q?.id && ObjectId.isValid(q.id)) {
-          source = await mainQuizzes.findOne({ _id: new ObjectId(q.id) });
+          source = await classQuizzes.findOne({ _id: new ObjectId(q.id) });
         }
         if (!source && q?.title) {
-          source = await mainQuizzes.findOne({ title: q.title });
+          source = await classQuizzes.findOne({ title: q.title });
         }
         if (!source) continue;
 
