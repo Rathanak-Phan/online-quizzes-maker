@@ -26,7 +26,7 @@ export async function GET(
 
     let questions = Array.isArray(studentDoc.questions) ? studentDoc.questions : [];
     if (!questions || questions.length === 0) {
-      const mainDbName = process.env.MONGODB_DB_NAME || "online-quizzes-maker";
+      const mainDbName = "main";
       const mainDb = client.db(mainDbName);
       const teacherQuizzes = mainDb.collection("quizzes");
 
@@ -86,10 +86,6 @@ export async function GET(
       category: studentDoc.category || "General",
       timeLimit: studentDoc.timeLimit || 30,
       status: studentDoc.status || "draft",
-      isTemplate: Boolean(studentDoc.isTemplate),
-      lastUsed: studentDoc.lastUsed || studentDoc.createdAt,
-      createdAt: studentDoc.createdAt,
-      updatedAt: studentDoc.updatedAt,
       questions: normalizedQuestions,
     };
 
@@ -135,9 +131,6 @@ export async function DELETE(
       category: quizDoc.category || "General",
       timeLimit: quizDoc.timeLimit || 30,
       status: quizDoc.status || "draft",
-      isTemplate: Boolean(quizDoc.isTemplate),
-      createdAt: quizDoc.createdAt,
-      updatedAt: quizDoc.updatedAt,
     };
 
     return NextResponse.json({

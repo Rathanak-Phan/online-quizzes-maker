@@ -110,12 +110,11 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
     const teacherDb = client.db("teacher");
-    const quizzesDb = client.db("norak"); // Dual write for student access
+    const mainDb = client.db("main"); // Dual write for student access
 
     const teacherQuizzes = teacherDb.collection("quizzes");
-    const publicQuizzes = quizzesDb.collection("quizzes");
+    const publicQuizzes = mainDb.collection("quizzes");
 
-    // Construct the object strictly according to your requested structure
     const newQuizData = {
       title: title.trim(),
       description: description?.trim() || "",
@@ -125,14 +124,11 @@ export async function POST(request: NextRequest) {
       questions: Array.isArray(questions) ? questions : [], 
     };
 
-    // 1. Insert into Teacher DB
     const teacherInsert = await teacherQuizzes.insertOne({ ...newQuizData });
 
-    // 2. Insert into Norak (Public/Student) DB
     try {
       await publicQuizzes.insertOne({ ...newQuizData });
     } catch (err) {
-      // Rollback teacher DB insert if norak DB fails to keep consistency
       await teacherQuizzes.deleteOne({ _id: teacherInsert.insertedId });
       throw err;
     }

@@ -7,7 +7,6 @@ async function resolveParams<T>(params: T | Promise<T>): Promise<T> {
   return params instanceof Promise ? await params : params;
 }
 
-// GET - Fetch single quiz
 export async function GET(
   request: NextRequest,
   context: { params: { quizId: string } | Promise<{ quizId: string }> }

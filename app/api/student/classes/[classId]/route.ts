@@ -28,20 +28,12 @@ export async function GET(request: NextRequest, context: { params: any }) {
       );
     }
 
-    // Extract students from the embedded array in the class document
     const students = (classData.students || []).map((student: any) => {
-      // Handle both object format with id/name/grade and full student objects
       return {
         _id: String(student.id || student._id || ""),
         name: String(student.name || ""),
         email: String(student.email || ""),
-        joinedAt: student.joinedAt
-          ? new Date(student.joinedAt).toISOString()
-          : new Date().toISOString(),
-        quizzesAttempted: Number(student.quizzesAttempted) || 0,
-        avgScore: Number(student.avgScore) || 0,
-        grade: String(student.grade || ""),
-      };
+        grade: student.grade || [],      };
     });
 
     // Extract quizzes from the embedded array in the class document
@@ -50,7 +42,6 @@ export async function GET(request: NextRequest, context: { params: any }) {
         id: String(quiz.id || ""),
         title: String(quiz.title || ""),
         questions: Number(quiz.questions) || 0,
-        description: String(quiz.description || ""),
       };
     });
 
@@ -58,7 +49,7 @@ export async function GET(request: NextRequest, context: { params: any }) {
     const avgScore =
       students.length > 0
         ? Math.round(
-            (students.reduce((sum, s) => sum + (s.avgScore || 0), 0) /
+            (students.reduce((sum: number, s: any) => sum + (s.avgScore || 0), 0) /
               students.length) *
               10
           ) / 10
@@ -71,13 +62,10 @@ export async function GET(request: NextRequest, context: { params: any }) {
         name: classData.name || "",
         code: classData.code || "",
         type: classData.type || "public",
-        description: classData.description || "",
         studentCount: students.length,
         quizzesCount: quizzes.length,
         avgScore: avgScore,
-        createdAt: classData.createdAt || new Date().toISOString(),
         subject: classData.subject || "",
-        schedule: classData.schedule || "",
         teacher: classData.teacher || null,
       },
       students: students,

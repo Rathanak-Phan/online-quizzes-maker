@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
 
-    const mainDb = client.db("teacher");
+    const mainDb = client.db("main");
     const teacherQuizzes = mainDb.collection("quizzes");
 
     const studentDb = client.db("student");
@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
       title?: string;
       description?: string;
       category?: string;
-      timeLimit?: number;
       status?: string;
-      lastUsed?: Date;
+      timeLimit?: number;
+      questions?: any[];
     };
     let sourceQuiz: TeacherQuizDoc | null = null;
     if (ObjectId.isValid(raw)) {
@@ -63,18 +63,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const now = new Date();
     const doc = {
       title: sourceQuiz.title || "Untitled Quiz",
       description: sourceQuiz.description || "",
       category: sourceQuiz.category || "General",
-      timeLimit: sourceQuiz.timeLimit || 30,
       status: sourceQuiz.status || "draft",
-      isTemplate: false,
-      lastUsed: sourceQuiz.lastUsed || now,
-      createdAt: now,
-      updatedAt: now,
-      sourceQuizId: sourceQuiz._id,
+      timeLimit: sourceQuiz.timeLimit || 30,
+      questions: sourceQuiz.questions || [],
     };
 
     const result = await studentQuizzes.insertOne(doc);
@@ -87,13 +82,10 @@ export async function POST(request: NextRequest) {
           _id: result.insertedId.toString(),
           title: doc.title,
           description: doc.description,
+          status: doc.status,
           category: doc.category,
           timeLimit: doc.timeLimit,
-          status: doc.status,
-          isTemplate: doc.isTemplate,
-          lastUsed: doc.lastUsed,
-          createdAt: doc.createdAt,
-          updatedAt: doc.updatedAt,
+          questions: doc.questions, 
         },
       },
       { status: 201 }

@@ -104,14 +104,14 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
     const teacherDb = client.db("teacher");
-    const quizzesDb = client.db("norak");
+    const mainDb = client.db("main");
 
     const teacherClasses = teacherDb.collection("classes");
-    const quizzesClasses = quizzesDb.collection("classes");
+    const mainClasses = mainDb.collection("classes");
 
     const exists = await Promise.all([
       teacherClasses.findOne({ code: normalizedCode }),
-      quizzesClasses.findOne({ code: normalizedCode }),
+      mainClasses.findOne({ code: normalizedCode }),  
     ]);
 
     if (exists[0] || exists[1]) {
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     const teacherInsert = await teacherClasses.insertOne({ ...newClassData });
 
     try {
-      await quizzesClasses.insertOne({ ...newClassData });
+      await mainClasses.insertOne({ ...newClassData });
     } catch (err) {
       await teacherClasses.deleteOne({ _id: teacherInsert.insertedId });
       throw err;

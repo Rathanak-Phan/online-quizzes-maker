@@ -22,15 +22,12 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
 
-    // Search for class code in "norak" database
-    const sourceDb = client.db("norak");
-    const sourceCollection = sourceDb.collection("classes");
+    const mainDb = client.db("main");
+    const sourceCollection = mainDb.collection("classes");
 
-    // Target database is "student"
     const targetDb = client.db("student");
     const targetCollection = targetDb.collection("classes");
 
-    // Find class by code in norak database
     const sourceClass = await sourceCollection.findOne({ code });
     if (!sourceClass) {
       return NextResponse.json(
@@ -57,14 +54,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const now = new Date();
     const doc = {
       name: sourceClass.name,
       code: sourceClass.code,
       type: sourceClass.type || "public",
-      description: sourceClass.description || "",
-      subject: sourceClass.subject || "",
-      schedule: sourceClass.schedule || "",
       teacherId:
         typeof sourceClass.teacherId === "string"
           ? sourceClass.teacherId
@@ -72,11 +65,9 @@ export async function POST(request: NextRequest) {
           ? sourceClass.teacherId
           : undefined,
       students: sourceClass.students || [],
+      quizzes: sourceClass.quizzes || [],
       inviteLink:
         sourceClass.inviteLink || generateInviteLink(sourceClass.code),
-      sourceClassId: sourceClass._id,
-      createdAt: now,
-      updatedAt: now,
     };
 
     const result = await targetCollection.insertOne(doc);

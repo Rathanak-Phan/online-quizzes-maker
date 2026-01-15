@@ -71,18 +71,16 @@ export async function DELETE(request: NextRequest, context: { params: any }) {
     const client = await clientPromise;
     const objectId = new ObjectId(classId);
 
-    // Delete from all three databases with individual error handling
     const teacherDb = client.db("teacher");
-    const norakDb = client.db("norak");
+    const mainDb = client.db("main");
     const studentDb = client.db("student");
 
     let deletionResults = {
       teacher: 0,
-      norak: 0,
+      main: 0,
       student: 0,
     };
 
-    // Delete from teacher database
     try {
       const teacherResult = await teacherDb
         .collection("classes")
@@ -95,15 +93,14 @@ export async function DELETE(request: NextRequest, context: { params: any }) {
       console.error("[DELETE] Error deleting from teacher db:", err);
     }
 
-    // Delete from norak database
     try {
-      const norakResult = await norakDb
+      const mainResult = await mainDb
         .collection("classes")
         .deleteOne({ _id: objectId });
-      deletionResults.norak = norakResult.deletedCount;
-      console.log(`[DELETE] Deleted ${norakResult.deletedCount} from norak db`);
+      deletionResults.main = mainResult.deletedCount;
+      console.log(`[DELETE] Deleted ${mainResult.deletedCount} from main db`);
     } catch (err) {
-      console.error("[DELETE] Error deleting from norak db:", err);
+      console.error("[DELETE] Error deleting from main db:", err);
     }
 
     // Delete from student database
@@ -120,7 +117,7 @@ export async function DELETE(request: NextRequest, context: { params: any }) {
     }
 
     const totalDeleted =
-      deletionResults.teacher + deletionResults.norak + deletionResults.student;
+      deletionResults.teacher + deletionResults.main + deletionResults.student;
 
     if (totalDeleted === 0) {
       return NextResponse.json(
@@ -130,7 +127,7 @@ export async function DELETE(request: NextRequest, context: { params: any }) {
     }
 
     console.log(
-      `[DELETE] Class deleted successfully: teacher=${deletionResults.teacher}, norak=${deletionResults.norak}, student=${deletionResults.student}`
+      `[DELETE] Class deleted successfully: teacher=${deletionResults.teacher}, main=${deletionResults.main}, student=${deletionResults.student}`
     );
     return NextResponse.json(
       {
