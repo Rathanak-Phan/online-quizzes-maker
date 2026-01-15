@@ -89,17 +89,33 @@ export default function ClassesPage() {
       const res = await fetch(`/api/teacher/classes/${classId}`, {
         method: "DELETE",
       });
+
+      if (!res.ok) {
+        const contentType = res.headers.get("content-type");
+        let errorMsg = "Failed to delete class";
+
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          errorMsg = data.error || errorMsg;
+        }
+
+        throw new Error(errorMsg);
+      }
+
       const data = await res.json();
 
       if (data.success) {
         setClasses((prev) => prev.filter((c) => c._id !== classId));
         alert("Class deleted successfully!");
       } else {
-        alert("Error: " + data.error);
+        alert("Error: " + (data.error || "Failed to delete class"));
       }
-    } catch (err) {
-      console.error(err);
-      alert("Something went wrong while deleting the class.");
+    } catch (err: any) {
+      console.error("[deleteClass] Error:", err);
+      alert(
+        "Something went wrong while deleting the class: " +
+          (err.message || "Unknown error")
+      );
     }
   };
 

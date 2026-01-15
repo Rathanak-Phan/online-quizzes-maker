@@ -1,0 +1,86 @@
+import { NextRequest, NextResponse } from "next/server";
+import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
+
+export async function GET(request: NextRequest, context: { params: any }) {
+  const { classId } = await context.params;
+
+  if (!classId || !ObjectId.isValid(classId)) {
+    return NextResponse.json(
+      { success: false, error: "Invalid class ID" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const client = await clientPromise;
+    const dbStudent = client.db("student");
+
+    // Fetch class details from student database
+    const classData = await dbStudent.collection("classes").findOne({
+      _id: new ObjectId(classId),
+    });
+
+    if (!classData) {
+      return NextResponse.json(
+        { success: false, error: "Class not found" },
+        { status: 404 }
+      );
+    }
+
+    // Extract students from the embedded array in the class document
+    const students = (classData.students || []).map((student: any) => ({
+      _id: student.id || student._id || "",
+      name: student.name || "",
+      email: student.email || "",
+      joinedAt: student.joinedAt || new Date(),
+      quizzesAttempted: student.quizzesAttempted || 0,
+      avgScore: student.avgScore || 0,
+      grade: student.grade || "",
+    }));
+
+    // Extract quizzes from the embedded array in the class document
+    const quizzes = (classData.quizzes || []).map((quiz: any) => ({
+      id: quiz.id || "",
+      title: quiz.title || "",
+      questions: quiz.questions || 0,
+      description: quiz.description || "",
+    }));
+
+    // Calculate average score from students
+    const avgScore =
+      students.length > 0
+        ? Math.round(
+            (students.reduce((sum, s) => sum + (s.avgScore || 0), 0) /
+              students.length) *
+              10
+          ) / 10
+        : 0;
+
+    return NextResponse.json({
+      success: true,
+      class: {
+        _id: classData._id.toString(),
+        name: classData.name,
+        code: classData.code,
+        type: classData.type,
+        description: classData.description || "",
+        studentCount: students.length,
+        quizzesCount: quizzes.length,
+        avgScore: avgScore,
+        createdAt: classData.createdAt || new Date(),
+        subject: classData.subject || "",
+        schedule: classData.schedule || "",
+        teacher: classData.teacher || null,
+      },
+      students: students,
+      quizzes: quizzes,
+    });
+  } catch (error) {
+    console.error("[GET /api/student/classes/[classId]] Error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch class details" },
+      { status: 500 }
+    );
+  }
+}

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
 
-    const mainDb = client.db(process.env.MONGODB_DB_NAME || "online-quizzes");
+    const mainDb = client.db("teacher");
     const teacherQuizzes = mainDb.collection("quizzes");
 
     const studentDb = client.db("student");

@@ -22,16 +22,19 @@ export async function POST(request: NextRequest) {
 
     const client = await clientPromise;
 
-    const sourceDb = client.db("online-quizzes");
+    // Search for class code in "norak" database
+    const sourceDb = client.db("norak");
     const sourceCollection = sourceDb.collection("classes");
 
+    // Target database is "student"
     const targetDb = client.db("student");
     const targetCollection = targetDb.collection("classes");
 
+    // Find class by code in norak database
     const sourceClass = await sourceCollection.findOne({ code });
     if (!sourceClass) {
       return NextResponse.json(
-        { success: false, error: "Class code not found" },
+        { success: false, error: "Class code not found in database" },
         { status: 404 }
       );
     }
@@ -46,7 +49,9 @@ export async function POST(request: NextRequest) {
           name: existing.name,
           code: existing.code,
           type: existing.type,
-          students: Array.isArray(existing.students) ? existing.students.length : existing.students || 0,
+          students: Array.isArray(existing.students)
+            ? existing.students.length
+            : existing.students || 0,
           inviteLink: existing.inviteLink,
         },
       });
@@ -67,7 +72,8 @@ export async function POST(request: NextRequest) {
           ? sourceClass.teacherId
           : undefined,
       students: sourceClass.students || [],
-      inviteLink: sourceClass.inviteLink || generateInviteLink(sourceClass.code),
+      inviteLink:
+        sourceClass.inviteLink || generateInviteLink(sourceClass.code),
       sourceClassId: sourceClass._id,
       createdAt: now,
       updatedAt: now,
@@ -84,7 +90,9 @@ export async function POST(request: NextRequest) {
           name: doc.name,
           code: doc.code,
           type: doc.type,
-          students: Array.isArray(doc.students) ? doc.students.length : doc.students || 0,
+          students: Array.isArray(doc.students)
+            ? doc.students.length
+            : doc.students || 0,
           inviteLink: doc.inviteLink,
         },
       },

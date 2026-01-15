@@ -64,12 +64,9 @@ export async function GET(request: NextRequest) {
       const db = client.db("student");
       const classesCollection = db.collection("classes");
 
-      // Get teacher ID (for now use mock)
-      const teacherId = new ObjectId("65a1b2c3d4e5f67890123456");
-
-      // Fetch classes from MongoDB
+      // Fetch ALL classes from MongoDB for students
       const classes = await classesCollection
-        .find({ teacherId })
+        .find({})
         .sort({ createdAt: -1 })
         .toArray();
 
