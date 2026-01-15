@@ -101,9 +101,7 @@ export async function DELETE(request: NextRequest, context: { params: any }) {
         .collection("classes")
         .deleteOne({ _id: objectId });
       deletionResults.norak = norakResult.deletedCount;
-      console.log(
-        `[DELETE] Deleted ${norakResult.deletedCount} from norak db`
-      );
+      console.log(`[DELETE] Deleted ${norakResult.deletedCount} from norak db`);
     } catch (err) {
       console.error("[DELETE] Error deleting from norak db:", err);
     }
@@ -122,9 +120,7 @@ export async function DELETE(request: NextRequest, context: { params: any }) {
     }
 
     const totalDeleted =
-      deletionResults.teacher +
-      deletionResults.norak +
-      deletionResults.student;
+      deletionResults.teacher + deletionResults.norak + deletionResults.student;
 
     if (totalDeleted === 0) {
       return NextResponse.json(
