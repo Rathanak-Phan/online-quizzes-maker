@@ -1,4 +1,6 @@
 import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
+import { redirect } from "next/navigation";
 
 export default async function AdminTeachersPage() {
   try {
@@ -17,15 +19,27 @@ export default async function AdminTeachersPage() {
       email: String(t.email || ""),
       isValidated: Boolean(t.isValidated),
     }));
+    async function deleteTeacher(formData: FormData) {
+      "use server";
+      const id = String(formData.get("id") || "");
+      if (!id || !ObjectId.isValid(id)) {
+        redirect("/admin/teachers");
+      }
+      const client = await clientPromise;
+      const db = client.db("main");
+      await db.collection("users").deleteOne({ _id: new ObjectId(id), role: "teacher" });
+      redirect("/admin/teachers");
+    }
 
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Teachers</h1>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="grid grid-cols-3 gap-4 p-5 border-b border-gray-100 bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="grid grid-cols-4 gap-4 p-5 border-b border-gray-100 bg-gray-50/50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             <div>Name</div>
             <div>Email</div>
             <div>Validated</div>
+            <div className="text-right">Actions</div>
           </div>
           {data.length === 0 ? (
             <div className="p-8 text-center text-gray-500">No teachers found</div>
@@ -33,12 +47,20 @@ export default async function AdminTeachersPage() {
             data.map((t) => (
               <div
                 key={t._id}
-                className="grid grid-cols-3 gap-4 p-5 border-b border-gray-100 last:border-none items-center text-sm"
+                className="grid grid-cols-4 gap-4 p-5 border-b border-gray-100 last:border-none items-center text-sm"
               >
                 <div className="font-medium text-gray-900">{t.name}</div>
                 <div className="text-gray-700">{t.email}</div>
                 <div className={t.isValidated ? "text-green-600 font-semibold" : "text-yellow-600 font-semibold"}>
                   {t.isValidated ? "Yes" : "Pending"}
+                </div>
+                <div className="flex justify-end">
+                  <form action={deleteTeacher}>
+                    <input type="hidden" name="id" value={t._id} />
+                    <button className="inline-flex items-center gap-2 px-3 py-1.5 text-red-700 hover:bg-red-50 rounded-lg">
+                      Delete
+                    </button>
+                  </form>
                 </div>
               </div>
             ))

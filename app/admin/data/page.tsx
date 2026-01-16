@@ -54,18 +54,22 @@ async function deleteData(formData: FormData) {
     await db.collection(collection).deleteOne({ _id: new ObjectId(id) });
   } catch (error) {
     console.error("Failed to delete item:", error);
-    // You might want to handle this error more gracefully in a real app
   }
   
   redirect(`/admin/templates?tab=${curTab}`);
 }
 
+// --- Main Page Component ---
 export default async function AdminDataPage({
   searchParams,
 }: {
-  searchParams?: { tab?: string };
+  // FIX 1: Update type to Promise
+  searchParams: Promise<{ tab?: string }>;
 }) {
-  const tab = searchParams?.tab || "quizzes";
+  // FIX 2: Await the searchParams before accessing properties
+  const params = await searchParams;
+  const tab = params.tab || "quizzes";
+
   let quizzes: any[] = [];
   let classes: any[] = [];
   let templates: any[] = [];
@@ -75,7 +79,6 @@ export default async function AdminDataPage({
     const client = await clientPromise;
     const db = client.db("main");
 
-    // Optimized: Only fetch data for the active tab
     if (tab === "quizzes") {
       const raw = await db.collection("quizzes")
         .find({})
@@ -139,7 +142,7 @@ export default async function AdminDataPage({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 pl-[5rem]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Data Management</h1>
         <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">

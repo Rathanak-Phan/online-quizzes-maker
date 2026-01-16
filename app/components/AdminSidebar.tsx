@@ -10,10 +10,10 @@ export default function AdminSidebar() {
   const isActive = (path: string) => pathname.startsWith(path) || pathname === path;
 
   const navItems = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Teachers", href: "/admin/teachers", icon: UserCheck },
     { name: "Students", href: "/admin/students", icon: Users },
-    { name: "Data", href: "/admin/templates", icon: LayoutTemplate },
+    { name: "Data", href: "/admin/data", icon: LayoutTemplate },
   ];
 
   return (
