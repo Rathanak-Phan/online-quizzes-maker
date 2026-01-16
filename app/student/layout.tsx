@@ -1,4 +1,4 @@
-import StudentSidebar from "./components/Sidebar";
+import StudentSidebar from "../components/student-sidebar";
 import Header from "../components/ui/header";
 
 

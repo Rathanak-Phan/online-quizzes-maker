@@ -5,7 +5,7 @@ export default function ({ children,}: Readonly<{ children: React.ReactNode;}>) 
     return (
         <div>
             <Header />
-            <div className="">
+            <div>
                 {children}
             </div>
         </div>
