@@ -1,4 +1,3 @@
-// app/api/auth/register/route.ts
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
@@ -12,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db();
+    const db = client.db('main');
     const users = db.collection('users');
 
     // Check if email already exists

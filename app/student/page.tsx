@@ -15,13 +15,14 @@ interface StoredUser {
 export default function StudentDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [classes, setClasses] = useState<
     { _id: string; name: string; code: string; students: number; type?: string }[]
   >([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [classesError, setClassesError] = useState<string | null>(null);
 
+/*
   useEffect(() => {
     const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
     const parsed: StoredUser | null = stored ? JSON.parse(stored) : null;
@@ -32,7 +33,7 @@ export default function StudentDashboard() {
     setUser(parsed);
     setLoading(false);
   }, [router]);
-
+*/
   useEffect(() => {
     const loadClasses = async () => {
       try {

@@ -28,11 +28,9 @@ interface DashboardStats {
 
 export default function TeacherDashboard() {
   const [classes, setClasses] = useState<Class[]>([]);
-  // 2. Added state for stats
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [teacherName, setTeacherName] = useState("Teacher");
   const [loading, setLoading] = useState(true);
-  // Unused error state removed for cleaner code, or keep if you plan to display it
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -58,15 +56,8 @@ export default function TeacherDashboard() {
     try {
       setLoading(true);
 
-      const storedUser = localStorage.getItem("user");
-      if (!storedUser) {
-        setError("Please log in again");
-        setLoading(false);
-        return;
-      }
 
-      const user = JSON.parse(storedUser);
-      setTeacherName(user.name || "Teacher");
+      setTeacherName("Teacher");
 
       const [classesRes] = await Promise.all([
         fetch("/api/teacher/classes"),
@@ -92,14 +83,9 @@ export default function TeacherDashboard() {
     } catch (err) {
       console.error("Failed to load dashboard:", err);
       setError("Failed to load data");
-
-      setClasses([
-        { _id: "1", code: "M10", name: "Math Grade 10A", students: 32, type: "public", status: "Active" },
-        { _id: "2", code: "S9", name: "Science 9B", students: 28, type: "public", status: "Active" },
-        { _id: "3", code: "E11", name: "English 11", students: 35, type: "private", status: "Archived" },
-      ]);
     } finally {
       setLoading(false);
+      
     }
   };
 

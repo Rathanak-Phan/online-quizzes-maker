@@ -39,6 +39,7 @@ export default function StudentQuizzesPage() {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
+/*
   useEffect(() => {
     const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (!stored) {
@@ -46,7 +47,7 @@ export default function StudentQuizzesPage() {
       return;
     }
   }, [router]);
-
+*/
   const fetchQuizzes = async () => {
     try {
       setLoading(true);

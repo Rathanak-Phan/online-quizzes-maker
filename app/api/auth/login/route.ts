@@ -1,4 +1,3 @@
-// app/api/auth/login/route.ts
 import { NextResponse } from 'next/server';
 import bcryptjs from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
@@ -12,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db('online-quizzes');
+    const db = client.db('main');
     const users = db.collection('users');
 
     // Find user

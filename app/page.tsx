@@ -1,4 +1,3 @@
-// app/page.tsx — Updated version without Axios
 "use client";
 
 import { useEffect, useState } from "react";
