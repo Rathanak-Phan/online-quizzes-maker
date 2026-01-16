@@ -414,9 +414,247 @@ export default function EditQuizPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Basic Info Section - Same as New Quiz page */}
-          {/* Copy the Basic Info, Questions, and Settings sections from NewQuizPage */}
-          {/* Make sure to use formData and questions state */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quiz Title *</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter quiz title"
+                  required
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe what this quiz is about..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Time Limit (minutes) *</label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="number"
+                    name="timeLimit"
+                    value={formData.timeLimit}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="180"
+                    className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="draft">Draft</option>
+                  <option value="published">Published</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Questions ({questions.length})</h2>
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <Plus className="w-4 h-4" />
+                Add Question
+              </button>
+            </div>
+
+            {questions.map((q, index) => {
+              return (
+                <div key={index} className="border border-gray-200 rounded-lg p-6 mb-6 last:mb-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium text-gray-900">Question {index + 1}</h3>
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(index)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Question Text *</label>
+                      <textarea
+                        value={q.question}
+                        onChange={(e) => handleQuestionChange(index, "question", e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={2}
+                        placeholder="Enter your question..."
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Question Type *</label>
+                      <select
+                        value={q.type}
+                        onChange={(e) => handleQuestionChange(index, "type", e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="singleSelect">Single Select</option>
+                        <option value="multiSelect">Multi Select</option>
+                        <option value="trueFalse">True/False</option>
+                        <option value="fillBlank">Fill in the Blank</option>
+                      </select>
+                    </div>
+
+                    {(q.type === "singleSelect" || q.type === "multiSelect" || q.type === "trueFalse") && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">Options *</label>
+                        <div className="space-y-3">
+                          {(q.options || []).map((opt, optIndex) => {
+                            const isSingle = q.type === "singleSelect";
+                            const isMulti = q.type === "multiSelect";
+                            const isTF = q.type === "trueFalse";
+                            const checkedSingle = isSingle && typeof q.answer === "number" && q.answer === optIndex;
+                            const checkedMulti = isMulti && Array.isArray(q.answers) && q.answers.includes(optIndex);
+                            const checkedTF = isTF && typeof q.answer === "boolean" && ((optIndex === 0 && q.answer === true) || (optIndex === 1 && q.answer === false));
+                            return (
+                              <div key={optIndex} className="flex items-center gap-3">
+                                {isSingle && (
+                                  <input
+                                    type="radio"
+                                    name={`correct-${index}`}
+                                    checked={checkedSingle}
+                                    onChange={() => handleQuestionChange(index, "answer", optIndex)}
+                                    className="w-4 h-4 text-blue-600"
+                                  />
+                                )}
+                                {isMulti && (
+                                  <input
+                                    type="checkbox"
+                                    checked={checkedMulti}
+                                    onChange={(e) => {
+                                      const next = Array.isArray(q.answers) ? [...q.answers] : [];
+                                      if (e.target.checked) {
+                                        if (!next.includes(optIndex)) next.push(optIndex);
+                                      } else {
+                                        const i = next.indexOf(optIndex);
+                                        if (i >= 0) next.splice(i, 1);
+                                      }
+                                      handleQuestionChange(index, "answers", next);
+                                    }}
+                                    className="w-4 h-4 text-blue-600"
+                                  />
+                                )}
+                                {isTF && (
+                                  <input
+                                    type="radio"
+                                    name={`tf-${index}`}
+                                    checked={checkedTF}
+                                    onChange={() => handleQuestionChange(index, "answer", optIndex === 0)}
+                                    className="w-4 h-4 text-blue-600"
+                                  />
+                                )}
+                                <input
+                                  type="text"
+                                  value={typeof opt === "string" ? opt : String(opt ?? "")}
+                                  onChange={(e) => handleOptionChange(index, optIndex, e.target.value)}
+                                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder={`Option ${optIndex + 1}`}
+                                  required={q.type !== "trueFalse"}
+                                  disabled={q.type === "trueFalse"}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {q.type === "fillBlank" && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Correct Answer *</label>
+                        <input
+                          type="text"
+                          value={typeof q.answer === "string" ? q.answer : ""}
+                          onChange={(e) => handleQuestionChange(index, "answer", e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Enter the correct answer"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Hint (Optional)</label>
+                      <textarea
+                        value={q.hint || ""}
+                        onChange={(e) => handleQuestionChange(index, "hint", e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={2}
+                        placeholder="Provide a hint to help students"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Explanation (Optional)</label>
+                      <textarea
+                        value={q.explanation || ""}
+                        onChange={(e) => handleQuestionChange(index, "explanation", e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={2}
+                        placeholder="Explain why this is the correct answer"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-end pt-2">
+            <button
+              type="submit"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg"
+            >
+              Save Changes
+            </button>
+          </div>
         </form>
       </div>
     </div>

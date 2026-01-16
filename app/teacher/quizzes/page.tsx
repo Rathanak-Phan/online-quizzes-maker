@@ -286,7 +286,7 @@ export default function QuizzesPage() {
           </div>
           <div className="flex gap-3">
             <Link
-              href="/teacher/quizzes/templates"
+              href="/teacher/templates"
               className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-all"
             >
               <LayoutTemplate className="w-5 h-5" />
