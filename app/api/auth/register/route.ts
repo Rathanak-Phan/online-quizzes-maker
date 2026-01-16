@@ -20,10 +20,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Set role and validation status
     const userRole = role === 'teacher' ? 'teacher' : 'user';
     const isValidated = userRole === 'teacher' ? false : true;
 
@@ -31,13 +27,14 @@ export async function POST(req: Request) {
     const result = await users.insertOne({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password: hashedPassword,
+      password: password,
       role: userRole,
       isValidated,
-      adSkipping: false, // Default: no ad-skipping
+      adSkipping: false,
       image: null,
       createdAt: new Date(),
     });
+
 
     return NextResponse.json({
       message: userRole === 'teacher'
