@@ -13,7 +13,7 @@ export default function AdminSidebar() {
     { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { name: "Teachers", href: "/admin/teachers", icon: UserCheck },
     { name: "Students", href: "/admin/students", icon: Users },
-    { name: "Templates", href: "/admin/templates", icon: LayoutTemplate },
+    { name: "Data", href: "/admin/templates", icon: LayoutTemplate },
   ];
 
   return (
