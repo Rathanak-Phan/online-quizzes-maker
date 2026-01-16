@@ -87,7 +87,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white px-4 pt-24">
       <div className="w-full max-w-xl">
         <div className="bg-white shadow-xl rounded-2xl p-8 backdrop-blur-sm">
           {/* Logo */}
