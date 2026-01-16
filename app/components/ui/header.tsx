@@ -73,7 +73,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="text-2xl font-bold text-blue-600">
-          <Link href="/">Online-Quiz</Link>
+          <Link href="/">QuizHub</Link>
         </div>
 
         {/* Desktop Menu */}
