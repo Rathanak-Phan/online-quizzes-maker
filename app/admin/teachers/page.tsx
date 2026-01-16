@@ -19,6 +19,20 @@ export default async function AdminTeachersPage() {
       email: String(t.email || ""),
       isValidated: Boolean(t.isValidated),
     }));
+    async function validateTeacher(formData: FormData) {
+      "use server";
+      const id = String(formData.get("id") || "");
+      if (!id || !ObjectId.isValid(id)) {
+        redirect("/admin/teachers");
+      }
+      const client = await clientPromise;
+      const db = client.db("main");
+      await db.collection("users").updateOne(
+        { _id: new ObjectId(id), role: "teacher" },
+        { $set: { isValidated: true } }
+      );
+      redirect("/admin/teachers");
+    }
     async function deleteTeacher(formData: FormData) {
       "use server";
       const id = String(formData.get("id") || "");
@@ -55,6 +69,14 @@ export default async function AdminTeachersPage() {
                   {t.isValidated ? "Yes" : "Pending"}
                 </div>
                 <div className="flex justify-end">
+                  {!t.isValidated && (
+                    <form action={validateTeacher} className="mr-2 inline-flex">
+                      <input type="hidden" name="id" value={t._id} />
+                      <button className="inline-flex items-center gap-2 px-3 py-1.5 text-green-700 hover:bg-green-50 rounded-lg">
+                        Validate
+                      </button>
+                    </form>
+                  )}
                   <form action={deleteTeacher}>
                     <input type="hidden" name="id" value={t._id} />
                     <button className="inline-flex items-center gap-2 px-3 py-1.5 text-red-700 hover:bg-red-50 rounded-lg">
