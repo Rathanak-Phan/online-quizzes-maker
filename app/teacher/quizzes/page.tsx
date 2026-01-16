@@ -227,9 +227,7 @@ export default function QuizzesPage() {
       setQuizzes(normalized);
 
       // Extract unique categories for the filter
-      const uniqueCategories = Array.from(
-        new Set(normalized.map((q: Quiz) => q.category).filter(Boolean))
-      ) as string[];
+      const uniqueCategories = ["Mathematics", "Science", "History", "English", "Computer Science", "Geography", "Art", "Music", "Physical Education", "Other"];
       setCategories(uniqueCategories);
 
     } catch (err: any) {

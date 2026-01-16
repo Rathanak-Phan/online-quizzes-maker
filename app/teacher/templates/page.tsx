@@ -64,8 +64,9 @@ export default function TeacherTemplatesPage() {
   }, [sortBy, categoryFilter, searchTerm]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(templates.map(t => t.category).filter(Boolean)));
+    return ["Mathematics", "Science", "History", "English", "Computer Science", "Geography", "Art", "Music", "Physical Education", "Other"];
   }, [templates]);
+
 
   const filtered = useMemo(() => {
     const bySearch = templates.filter(t => {
