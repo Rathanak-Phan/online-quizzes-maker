@@ -91,8 +91,6 @@ export async function PUT(
       success: true,
       quiz: {
         ...updatedQuiz,
-        _id: updatedQuiz?._id.toString(),
-        teacherId: updatedQuiz?.teacherId.toString(),
       },
       message: "Quiz updated successfully",
     });

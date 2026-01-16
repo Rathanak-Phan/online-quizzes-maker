@@ -18,12 +18,11 @@ import {
 } from "lucide-react";
 
 interface Question {
-  type: "singleSelect" | "multiSelect" | "trueFalse" | "fillBlank";
+  type: "multiple" | "truefalse" | "shortanswer";
   question: string;
-  options?: string[];
-  answer?: number | boolean | string;
-  answers?: number[];
-  hint?: string;
+  options: string[];
+  correctAnswer: number | string;
+  points?: number;
   explanation?: string;
 }
 
@@ -103,26 +102,54 @@ export default function EditQuizPage() {
           status: q.status,
         });
         const normalized: Question[] = Array.isArray(q.questions)
-          ? q.questions.map((it: any) => ({
-              type: (it.type as Question["type"]) || "singleSelect",
-              question: typeof it.question === "string" ? it.question : it.text || "",
-              options: Array.isArray(it.options)
+          ? q.questions.map((it: any) => {
+              const rawType = String(it.type || "").toLowerCase();
+              const type: Question["type"] =
+                rawType === "multiple" || rawType === "singleselect"
+                  ? "multiple"
+                  : rawType === "truefalse" || rawType === "true_false" || rawType === "boolean"
+                  ? "truefalse"
+                  : rawType === "shortanswer" || rawType === "fillblank" || rawType === "fill_blank"
+                  ? "shortanswer"
+                  : "multiple";
+              const question =
+                typeof it.question === "string"
+                  ? it.question
+                  : typeof it.text === "string"
+                  ? it.text
+                  : "";
+              let options: string[] = Array.isArray(it.options)
                 ? it.options.map((o: any) => (typeof o === "string" ? o : o?.text ?? String(o)))
-                : undefined,
-              answer:
-                it.answer !== undefined
-                  ? it.answer
-                  : Array.isArray(it.answers)
-                  ? undefined
-                  : it.correctAnswer,
-              answers: Array.isArray(it.answers)
-                ? it.answers
-                : Array.isArray(it.correctAnswers)
-                ? it.correctAnswers
-                : undefined,
-              hint: it.hint,
-              explanation: it.explanation,
-            }))
+                : [];
+              if (type === "truefalse") options = ["True", "False"];
+              let correctAnswer: number | string;
+              if (type === "shortanswer") {
+                correctAnswer =
+                  typeof it.correctAnswer === "string"
+                    ? it.correctAnswer
+                    : typeof it.answer === "string"
+                    ? it.answer
+                    : "";
+              } else {
+                if (typeof it.correctAnswer === "number") {
+                  correctAnswer = it.correctAnswer;
+                } else if (typeof it.answer === "number") {
+                  correctAnswer = it.answer;
+                } else if (typeof it.answer === "boolean") {
+                  correctAnswer = it.answer ? 0 : 1;
+                } else {
+                  correctAnswer = 0;
+                }
+              }
+              return {
+                type,
+                question,
+                options,
+                correctAnswer,
+                points: typeof it.points === "number" ? it.points : 10,
+                explanation: it.explanation,
+              } as Question;
+            })
           : [];
         setQuestions(normalized);
 
@@ -155,22 +182,15 @@ export default function EditQuizPage() {
 
     if (field === "type") {
       const t = value as Question["type"];
-      if (t === "singleSelect") {
+      if (t === "multiple") {
         updatedQuestions[index].options = ["", "", "", ""];
-        updatedQuestions[index].answer = 0;
-        updatedQuestions[index].answers = undefined;
-      } else if (t === "multiSelect") {
-        updatedQuestions[index].options = ["", "", "", ""];
-        updatedQuestions[index].answers = [];
-        updatedQuestions[index].answer = undefined;
-      } else if (t === "trueFalse") {
+        updatedQuestions[index].correctAnswer = 0;
+      } else if (t === "truefalse") {
         updatedQuestions[index].options = ["True", "False"];
-        updatedQuestions[index].answer = false;
-        updatedQuestions[index].answers = undefined;
-      } else if (t === "fillBlank") {
+        updatedQuestions[index].correctAnswer = 0;
+      } else if (t === "shortanswer") {
         updatedQuestions[index].options = [];
-        updatedQuestions[index].answer = "";
-        updatedQuestions[index].answers = undefined;
+        updatedQuestions[index].correctAnswer = "";
       }
     }
 
@@ -194,11 +214,11 @@ export default function EditQuizPage() {
   // Add new question
   const addQuestion = () => {
     const newQuestion: Question = {
-      type: "singleSelect",
+      type: "multiple",
       question: "",
       options: ["", "", "", ""],
-      answer: 0,
-      hint: "",
+      correctAnswer: 0,
+      points: 10,
       explanation: "",
     };
     setQuestions([...questions, newQuestion]);
@@ -235,30 +255,28 @@ export default function EditQuizPage() {
         return false;
       }
 
-      if (q.type === "singleSelect" || q.type === "multiSelect" || q.type === "trueFalse") {
+      if (q.type === "multiple") {
         const opts = q.options || [];
         const hasEmptyOptions = opts.some(opt => !opt?.trim());
-        if ((q.type === "singleSelect" || q.type === "multiSelect") && hasEmptyOptions) {
+        if (hasEmptyOptions) {
           setError(`Question ${i + 1} has empty options`);
           return false;
         }
-        if (q.type === "singleSelect") {
-          if (typeof q.answer !== "number") {
-            setError(`Question ${i + 1} must have a selected correct option`);
-            return false;
-          }
+        if (typeof q.correctAnswer !== "number") {
+          setError(`Question ${i + 1} must have a selected correct option`);
+          return false;
         }
-        if (q.type === "multiSelect") {
-          if (!Array.isArray(q.answers) || q.answers.length === 0) {
-            setError(`Question ${i + 1} must have at least one correct option`);
-            return false;
-          }
+      }
+      if (q.type === "truefalse") {
+        if (typeof q.correctAnswer !== "number") {
+          setError(`Question ${i + 1} must select True or False`);
+          return false;
         }
-        if (q.type === "trueFalse") {
-          if (typeof q.answer !== "boolean") {
-            setError(`Question ${i + 1} must set True or False as answer`);
-            return false;
-          }
+      }
+      if (q.type === "shortanswer") {
+        if (typeof q.correctAnswer !== "string" || !q.correctAnswer.trim()) {
+          setError(`Question ${i + 1} must provide a correct answer`);
+          return false;
         }
       }
     }
@@ -284,7 +302,14 @@ export default function EditQuizPage() {
         category: formData.category,
         status: formData.status,
         timeLimit: formData.timeLimit,
-        questions,
+        questions: questions.map((q) => ({
+          type: q.type,
+          question: q.question,
+          options: q.type === "shortanswer" ? [] : q.options,
+          correctAnswer: q.correctAnswer,
+          points: q.points ?? 10,
+          explanation: q.explanation,
+        })),
       };
 
 
@@ -531,74 +556,41 @@ export default function EditQuizPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Question Type *</label>
-                      <select
-                        value={q.type}
-                        onChange={(e) => handleQuestionChange(index, "type", e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="singleSelect">Single Select</option>
-                        <option value="multiSelect">Multi Select</option>
-                        <option value="trueFalse">True/False</option>
-                        <option value="fillBlank">Fill in the Blank</option>
-                      </select>
+                    <select
+                      value={q.type}
+                      onChange={(e) => handleQuestionChange(index, "type", e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="multiple">Multiple Choice</option>
+                      <option value="truefalse">True/False</option>
+                      <option value="shortanswer">Short Answer</option>
+                    </select>
                     </div>
 
-                    {(q.type === "singleSelect" || q.type === "multiSelect" || q.type === "trueFalse") && (
+                    {(q.type === "multiple" || q.type === "truefalse") && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-3">Options *</label>
                         <div className="space-y-3">
                           {(q.options || []).map((opt, optIndex) => {
-                            const isSingle = q.type === "singleSelect";
-                            const isMulti = q.type === "multiSelect";
-                            const isTF = q.type === "trueFalse";
-                            const checkedSingle = isSingle && typeof q.answer === "number" && q.answer === optIndex;
-                            const checkedMulti = isMulti && Array.isArray(q.answers) && q.answers.includes(optIndex);
-                            const checkedTF = isTF && typeof q.answer === "boolean" && ((optIndex === 0 && q.answer === true) || (optIndex === 1 && q.answer === false));
+                            const isTF = q.type === "truefalse";
+                            const checked = typeof q.correctAnswer === "number" && q.correctAnswer === optIndex;
                             return (
                               <div key={optIndex} className="flex items-center gap-3">
-                                {isSingle && (
-                                  <input
-                                    type="radio"
-                                    name={`correct-${index}`}
-                                    checked={checkedSingle}
-                                    onChange={() => handleQuestionChange(index, "answer", optIndex)}
-                                    className="w-4 h-4 text-blue-600"
-                                  />
-                                )}
-                                {isMulti && (
-                                  <input
-                                    type="checkbox"
-                                    checked={checkedMulti}
-                                    onChange={(e) => {
-                                      const next = Array.isArray(q.answers) ? [...q.answers] : [];
-                                      if (e.target.checked) {
-                                        if (!next.includes(optIndex)) next.push(optIndex);
-                                      } else {
-                                        const i = next.indexOf(optIndex);
-                                        if (i >= 0) next.splice(i, 1);
-                                      }
-                                      handleQuestionChange(index, "answers", next);
-                                    }}
-                                    className="w-4 h-4 text-blue-600"
-                                  />
-                                )}
-                                {isTF && (
-                                  <input
-                                    type="radio"
-                                    name={`tf-${index}`}
-                                    checked={checkedTF}
-                                    onChange={() => handleQuestionChange(index, "answer", optIndex === 0)}
-                                    className="w-4 h-4 text-blue-600"
-                                  />
-                                )}
+                                <input
+                                  type="radio"
+                                  name={`correct-${index}`}
+                                  checked={checked}
+                                  onChange={() => handleQuestionChange(index, "correctAnswer", optIndex)}
+                                  className="w-4 h-4 text-blue-600"
+                                />
                                 <input
                                   type="text"
                                   value={typeof opt === "string" ? opt : String(opt ?? "")}
                                   onChange={(e) => handleOptionChange(index, optIndex, e.target.value)}
                                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                   placeholder={`Option ${optIndex + 1}`}
-                                  required={q.type !== "trueFalse"}
-                                  disabled={q.type === "trueFalse"}
+                                  required={!isTF}
+                                  disabled={isTF}
                                 />
                               </div>
                             );
@@ -607,13 +599,13 @@ export default function EditQuizPage() {
                       </div>
                     )}
 
-                    {q.type === "fillBlank" && (
+                    {q.type === "shortanswer" && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Correct Answer *</label>
                         <input
                           type="text"
-                          value={typeof q.answer === "string" ? q.answer : ""}
-                          onChange={(e) => handleQuestionChange(index, "answer", e.target.value)}
+                          value={typeof q.correctAnswer === "string" ? q.correctAnswer : ""}
+                          onChange={(e) => handleQuestionChange(index, "correctAnswer", e.target.value)}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Enter the correct answer"
                           required
@@ -621,16 +613,6 @@ export default function EditQuizPage() {
                       </div>
                     )}
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Hint (Optional)</label>
-                      <textarea
-                        value={q.hint || ""}
-                        onChange={(e) => handleQuestionChange(index, "hint", e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        rows={2}
-                        placeholder="Provide a hint to help students"
-                      />
-                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Explanation (Optional)</label>
                       <textarea
