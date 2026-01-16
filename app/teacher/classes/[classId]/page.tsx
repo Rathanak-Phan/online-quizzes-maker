@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, UserPlus, FileText, Loader2, ChevronRight } from "lucide-react";
+import { Search, UserPlus, FileText, Loader2, ChevronRight, Trash2 } from "lucide-react";
 import { useParams } from "next/navigation";
 
 type Tab = "students" | "quizzes";
@@ -163,6 +163,44 @@ const fetchClassDetails = async () => {
     }
   };
 
+  const handleRemoveStudent = async (studentId: string, email?: string) => {
+    try {
+      const classId = params.classId as string;
+      const res = await fetch(`/api/teacher/classes/${classId}/removestudent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, email }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        alert(data.error || "Failed to remove student");
+        return;
+      }
+      setStudents((prev) => prev.filter((s) => s.id !== studentId && s.email !== email));
+    } catch {
+      alert("Server error");
+    }
+  };
+
+  const handleRemoveQuiz = async (quizId: string, title?: string) => {
+    try {
+      const classId = params.classId as string;
+      const res = await fetch(`/api/teacher/classes/${classId}/removequiz`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, title }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        alert(data.error || "Failed to remove quiz");
+        return;
+      }
+      setQuizzes((prev) => prev.filter((q) => q.id !== quizId && q.title !== title));
+    } catch {
+      alert("Server error");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-20">
@@ -312,6 +350,16 @@ const fetchClassDetails = async () => {
                       }`}>
                         {student.avgScore ? `${student.avgScore}%` : '--'}
                       </div>
+                      <div className="col-span-5 flex justify-end">
+                        <button
+                          className="flex items-center gap-2 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg"
+                          onClick={() => handleRemoveStudent(student.id, student.email)}
+                          title="Remove student"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -409,9 +457,16 @@ const fetchClassDetails = async () => {
                         </span>
                       </div>
 
-                      <div className="col-span-1 flex justify-end">
+                      <div className="col-span-1 flex justify-end gap-2">
                         <button className="text-gray-400 hover:text-blue-600 transition-colors">
                           <ChevronRight className="w-5 h-5" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg"
+                          onClick={() => handleRemoveQuiz(quiz.id, quiz.title)}
+                          title="Remove quiz"
+                        >
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
